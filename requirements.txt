@@ -5,3 +5,4 @@ scikit_learn==1.2.2
 spotipy==2.22.1
 stripe==5.4.0
 Werkzeug==2.2.3
+gunicorn
