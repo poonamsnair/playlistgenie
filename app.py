@@ -62,8 +62,8 @@ def refresh_token_if_expired():
 
 
 @app.route('/')
+@require_spotify_token
 def index():
-    refresh_token_if_expired()
     return redirect(url_for('playlists'))
 
 @app.route('/logout')
@@ -92,8 +92,8 @@ def callback():
 
 
 @app.route('/playlists/')
+@require_spotify_token
 def playlists():
-    refresh_token_if_expired()
     sp = spotipy.Spotify(auth=session['spotify_token'])
 
     if not session.get('spotify_user_id'):
