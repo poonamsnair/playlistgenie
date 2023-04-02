@@ -4,6 +4,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from itertools import zip_longest
@@ -199,7 +200,10 @@ def recommendation(playlist_id, rec_playlist_id):
             'weights': ['uniform', 'distance'],
             'metric': ['euclidean', 'manhattan', 'minkowski']
         }
-        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=5, n_jobs=-1)
+    
+        stratified_kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    
+        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=stratified_kfold, n_jobs=-1)
         grid_search.fit(X_scaled, y)
         knn = grid_search.best_estimator_
 
