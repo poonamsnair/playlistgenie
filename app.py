@@ -18,10 +18,13 @@ app = Flask(__name__)
 app.secret_key = 'POO123'
 Bootstrap(app)
 
-SPOTIPY_CLIENT_ID = 'e842bd01a6f84d63b95677a91cfdc7cc'
-SPOTIPY_CLIENT_SECRET = '645e3ad88608428987314bdd447bd708'
-SPOTIPY_REDIRECT_URI = 'http://localhost:8888/callback'
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
+
+if os.environ.get('APP_ENV') == 'prod':
+    SPOTIPY_REDIRECT_URI = 'https://warm-fortress-03932.herokuapp.com/callback'
+else:
+    SPOTIPY_REDIRECT_URI = 'http://localhost:8888/callback'
+
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
