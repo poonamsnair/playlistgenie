@@ -222,10 +222,11 @@ def recommendation(playlist_id, rec_playlist_id):
         scaler = MinMaxScaler()
         X_scaled = scaler.fit_transform(X)
 
-        # Use KNeighborsClassifier and optimize its hyperparameters with GridSearchCV
+       # Use KNeighborsClassifier and optimize its hyperparameters with GridSearchCV
         knn = KNeighborsClassifier()
+        max_neighbors = min(30, len(X) - 1)  # Set the maximum number of neighbors to the minimum of 30 and the number of samples minus 1
         param_grid = {
-            'n_neighbors': range(1, 31),
+            'n_neighbors': range(1, max_neighbors + 1),
             'weights': ['uniform', 'distance'],
             'metric': ['euclidean', 'manhattan', 'minkowski']
         }
