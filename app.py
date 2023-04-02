@@ -19,12 +19,7 @@ app.secret_key = 'POO123'
 Bootstrap(app)
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
-
-if os.environ.get('APP_ENV') == 'prod':
-    SPOTIPY_REDIRECT_URI = 'https://warm-fortress-03932.herokuapp.com/callback'
-else:
-    SPOTIPY_REDIRECT_URI = 'http://localhost:8888/callback'
-
+SPOTIPY_REDIRECT_URI = 'https://warm-fortress-03932.herokuapp.com/callback'
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
 
