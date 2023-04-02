@@ -63,6 +63,9 @@ def refresh_token_if_expired():
 
 @app.route('/')
 def index():
+    if session.get('spotify_token'):
+        return redirect(url_for('playlists'))
+
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     auth_url = auth_manager.get_authorize_url()
@@ -80,7 +83,6 @@ def logout():
 def callback():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    session.clear()
     token_info = auth_manager.get_access_token(request.args.get('code'))
     session['spotify_token_info'] = token_info
     session['spotify_token'] = token_info.get('access_token')
