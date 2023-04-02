@@ -21,7 +21,7 @@ app.secret_key = 'POO123'
 Bootstrap(app)
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
-SPOTIPY_REDIRECT_URI = 'https://warm-fortress-03932.herokuapp.com/callback'
+SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
 
@@ -263,4 +263,5 @@ if __name__ == '__main__':
     if env == 'production':
         app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
     else:
-        app.run(host='localhost', port=8888)
+        port = int(os.environ.get('PORT', 8888))
+        app.run(host='localhost', port=port)
