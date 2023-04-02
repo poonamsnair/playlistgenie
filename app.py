@@ -25,11 +25,16 @@ if os.environ.get('APP_ENV') == 'prod':
 else:
     SPOTIPY_REDIRECT_URI = 'http://localhost:8888/callback'
 
+SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
+SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
+
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
     logging.exception('Unhandled exception: %s', e)
-    return render_template('error.html'), 500
+    error_code = getattr(e, 'code', 500)  # Get the error code if available, default to 500
+    return render_template('error.html', error_code=error_code), error_code
+
 
 def get_spotify_client(access_token):
     client = spotipy.Spotify(auth=access_token)
@@ -52,9 +57,6 @@ def index():
 def logout():
     session.pop('spotify_token', None)
     return redirect(url_for('index'))
-
-
-
 
 
 @app.route('/callback/')
