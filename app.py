@@ -46,7 +46,7 @@ def require_spotify_token(func):
             auth_url = auth_manager.get_authorize_url()
             return render_template('index.html', auth_url=auth_url)
         else:
-            refresh_token_if_expired()  # Move this line here
+            refresh_token_if_expired() 
         return func(*args, **kwargs)
     return wrapper
 
@@ -64,7 +64,7 @@ def refresh_token_if_expired():
 @app.route('/')
 @require_spotify_token
 def index():
-    return redirect(url_for('playlists'))
+    return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
@@ -90,7 +90,6 @@ def callback():
     return redirect(url_for('index'))
 
 
-
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
@@ -111,6 +110,7 @@ def playlists():
 
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
+@require_spotify_token
 def rate_playlist(playlist_id):
     if session.get('spotify_token'):
         try:
@@ -136,6 +136,7 @@ def rate_playlist(playlist_id):
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
+@require_spotify_token
 def save_ratings(playlist_id):
     if session.get('spotify_token'):
         sp = spotipy.Spotify(auth=session['spotify_token'])
@@ -156,6 +157,7 @@ def save_ratings(playlist_id):
     
 
 @app.route('/create_playlist/', methods=['GET', 'POST'])
+@require_spotify_token
 def create_playlist():
     if not session.get('spotify_token'):
         return redirect(url_for('index'))
@@ -184,6 +186,7 @@ def create_playlist():
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
+@require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
         sp = spotipy.Spotify(auth=session['spotify_token'])
