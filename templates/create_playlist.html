@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1 class="page-title">Create New Playlist</h1>
+  <form method="POST" action="{{ url_for('create_playlist', playlist_id=session['playlist_id']) }}">
+    <div class="form-group custom-form-group">
+      <label for="playlist_name">Playlist Name</label>
+      <input type="text" class="form-control custom-form-control" id="playlist_name" name="playlist_name" placeholder="Enter playlist name" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Playlist</button>
+  </form>
+{% endblock %}

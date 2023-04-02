@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700,800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+      
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <title>{% block title %}Spotify Playlist Recommender{% endblock %}</title>
+  </head>
+  <body>
+    <!-- Loader HTML -->
+    <div class="loader-wrapper" id="loader">
+      <div class="loader-container">
+        <div class="loader"></div>
+      </div>
+    </div>
+    
+{% if not request.path == url_for('index') %}
+      <nav class="navbar navbar-expand-lg navbar-light">
+        <a class="navbar-brand text-white" href="#">Spotify Playlist Recommender</a>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ml-auto">
+            {% if 'user' in session %}
+              <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">Logout</a>
+              </li>
+            {% endif %}
+            {% if not request.path == url_for('logout') %}
+              <li class="nav-item">
+                <!-- Add the Stripe Buy Button script -->
+                <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+
+                <!-- Replace the Upgrade link with the Stripe Buy Button -->
+                <stripe-buy-button
+                  buy-button-id="buy_btn_1MsY4QIpDJwsO3dTMuyXa9KC"
+                  publishable-key="pk_test_51MsPZqIpDJwsO3dTZhBli2IN4yPQgbAsxtj1AWnXWlH8rIvd2rdLEoefmBKXDCLeyPN3O9bDjKirR8VUgHS1zyFk00lbJ3ti7o">
+                  Donate
+                </stripe-buy-button>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+      </nav>
+{% endif %}
+
+ <div class="container-wrapper">
+    <div class="container">
+      <div class="content-wrapper">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <footer class="text-white py-2">
+      <div class="container text-center">
+        Made by me 2023
+      </div>
+    </footer>
+  </div>
+      
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+            crossorigin="anonymous"></script>
+
+    <!-- Loader JavaScript -->
+    <script>
+      function showLoader() {
+        $('#loader').fadeIn('slow');
+      }
+
+      function hideLoader() {
+        $('#loader').fadeOut('slow');
+      }
+
+      $(window).on('load', function () {
+        hideLoader();
+      });
+
+      $(document).on('click', 'a:not([href^="#"])', function () {
+        showLoader();
+      });
+
+      $(document).on('submit', 'form', function () {
+        showLoader();
+      });
+    </script>
+  </body>
+</html>
+
