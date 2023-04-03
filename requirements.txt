@@ -6,3 +6,4 @@ scikit-learn
 Werkzeug
 Stripe
 Gunicorn
+flask_socketio
