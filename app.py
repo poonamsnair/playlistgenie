@@ -235,6 +235,11 @@ def recommendation(playlist_id, rec_playlist_id):
         X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
                           "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
         y = playlist_df['ratings']
+        
+        if len(X) <= 1:
+    return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
+max_neighbors = min(30, len(X) - 1)
+
 
         # Scale the features
         scaler = MinMaxScaler()
@@ -255,11 +260,12 @@ def recommendation(playlist_id, rec_playlist_id):
         grid_search.fit(X_scaled, y)
         knn = grid_search.best_estimator_
 
-        rec_tracks = []
-        # Use the 'id' column of the playlist_df to get the list of track IDs
+        rec_track_ids = set()
         for track_id in playlist_df['id'].tolist():
-            rec_tracks += sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
-        rec_track_ids = [track['id'] for track in rec_tracks]
+            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
+        for track in rec_tracks:
+            rec_track_ids.add(track['id'])
+        rec_track_ids = list(rec_track_ids)
 
         # Split the list of track IDs into chunks of 100 tracks each
         track_chunks = [rec_track_ids[i:i+100] for i in range(0, len(rec_track_ids), 100)]
