@@ -321,7 +321,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
         except Exception as e:
             return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
 
-socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
+socketio.emit("recommendation_done", {"request_id": rec_playlist_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
