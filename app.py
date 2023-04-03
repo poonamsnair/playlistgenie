@@ -21,11 +21,18 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from math import ceil
 from flask_mail import Mail, Message
-from tasks import async_recommendation, recommendation_function, q
+from tasks import async_recommendation, q
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
 Bootstrap(app)
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USERNAME'] = 'poonnair@gmail.com'
+app.config['MAIL_PASSWORD'] = 'mjscltaqlbyfzucj'
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
@@ -40,11 +47,6 @@ def handle_unhandled_exception(e):
     return render_template('error.html', error_code=error_code), error_code
 
 mail = Mail(app)
-
-def send_email(to, playlist_url):
-    msg = Message("Your Playlist Recommendations", sender="poonnnair@gmail.com", recipients=[to])
-    msg.body = f"Here's the link to your recommended playlist: {playlist_url}"
-    mail.send(msg)
     
     
 def inject_stripe_keys():
