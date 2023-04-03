@@ -13,11 +13,10 @@
       }
     }
   </style>
-<script src="https://cdn.jsdelivr.net/gh/danielgindi/bubbly-bg/src/bubbly-bg.js"></script>
+<link rel="stylesheet" href="{% static 'lavalamp.css' %}">
 {% endblock %}
 {% block body_class %}fixed-footer{% endblock %}
 {% block content %}
-  <!-- Remove this line: <canvas id="bubble"></canvas> -->
   <div class="simplified-hero" style="position: relative; z-index: 2;">
     <h1>Playlist Genie</h1>
     <h5>Discover new music tailored to your taste</h5>
@@ -29,24 +28,32 @@
     </div>
   </div>
 {% endblock %}
-{% block scripts %}
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      const bubblyCanvas = bubbly({
-        colorStart: "#FF9298",
-        colorStop: "#E4008E",
-        compose: "color",
-        blur: 1,
-        bubbles: 30,
-        radiusFunc: () => 4 + Math.random() * 25,
-        animate: true,
-        motion: "top",
-        speed: 0.5
-      });
 
-     // Adjust the zIndex and position of the canvas created by bubbly-bg library
-      bubblyCanvas.style.zIndex = -1;
-      bubblyCanvas.style.position = 'fixed';
-    });
-  </script>
+{% block scripts %}
+  function createBubble(x, y, radius) {
+  const bubble = document.createElement('div');
+  bubble.style.position = 'absolute';
+  bubble.style.width = radius * 2 + 'px';
+  bubble.style.height = radius * 2 + 'px';
+  bubble.style.borderRadius = '50%';
+  bubble.style.background = 'rgba(255, 255, 255, 0.2)';
+  bubble.style.top = y - radius + 'px';
+  bubble.style.left = x - radius + 'px';
+
+  document.body.appendChild(bubble);
+
+  setTimeout(() => {
+    bubble.remove();
+  }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setInterval(() => {
+    const x = Math.random() * window.innerWidth;
+    const y = window.innerHeight;
+    const radius = Math.random() * 20 + 10;
+
+    createBubble(x, y, radius);
+  }, 500);
+});
 {% endblock %}
