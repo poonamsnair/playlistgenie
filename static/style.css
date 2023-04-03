@@ -180,7 +180,7 @@ footer {
 
 .simplified-hero {
   position: absolute;
-  background-image: url('{{ url_for('static', filename='images/loginbg.png') }}');
+  background-image: url('{{ url_for('static', filename='images/loginbg.png') }}') !important;
   left: 0;
   right: 0;
   display: flex;
