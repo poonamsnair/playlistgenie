@@ -1,7 +1,7 @@
 from redis import Redis
 from rq import Queue
 
-from your_application import recommendation_function
+from app import recommendation_function
 
 q = Queue(connection=Redis())
 
