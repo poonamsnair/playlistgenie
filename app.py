@@ -205,7 +205,7 @@ def create_playlist():
         # Redirect to the rating page for the original playlist
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist['id']))
 
-    return render_template('create_playlist.html')
+    return render_template('create_playlist.html', playlist_id=playlist_id)
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
