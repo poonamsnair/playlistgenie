@@ -17,10 +17,8 @@
 {% endblock %}
 {% block body_class %}fixed-footer{% endblock %}
 {% block content %}
-  <div class="wrap">
-    <canvas id="bubble"></canvas>
-  </div>
-  <div class="simplified-hero">
+  <!-- Remove this line: <canvas id="bubble"></canvas> -->
+  <div class="simplified-hero" style="position: relative; z-index: 2;">
     <h1>Playlist Genie</h1>
     <h5>Discover new music tailored to your taste</h5>
     <div class="sign-up-options">
@@ -34,8 +32,7 @@
 {% block scripts %}
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      bubbly({
-        canvas: document.querySelector("#bubble"),
+      const bubblyCanvas = bubbly({
         colorStart: "#FF9298",
         colorStop: "#E4008E",
         compose: "color",
@@ -46,6 +43,12 @@
         motion: "top",
         speed: 0.5
       });
+
+      // Adjust the zIndex of the canvas created by bubbly-bg library
+      bubblyCanvas.style.zIndex = 1;
+      bubblyCanvas.style.position = 'absolute';
+      bubblyCanvas.style.top = 0;
+      bubblyCanvas.style.left = 0;
     });
   </script>
 {% endblock %}
