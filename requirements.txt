@@ -3,9 +3,5 @@ flask-bootstrap
 spotipy
 pandas
 scikit-learn
-redis
-rq
 Werkzeug
-Flask-Mail
-Stripe
 Gunicorn
