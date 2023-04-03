@@ -1,4 +1,5 @@
 from flask import Flask, redirect, request, session, url_for, render_template
+from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -26,6 +27,7 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'POO123'
 Bootstrap(app)
+socketio = SocketIO(app)
 
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
@@ -232,13 +234,9 @@ def create_playlist():
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
-
-@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
-@require_spotify_token
-@timeout(30, "The recommendation process took too long. Please try again.")
-def recommendation(playlist_id, rec_playlist_id):
-    if session.get('spotify_token'):
-        sp = spotipy.Spotify(auth=session['spotify_token'])
+    
+def background_recommendation(playlist_id, rec_playlist_id, request_id):
+    sp = spotipy.Spotify(auth=session['spotify_token'])
         playlist = sp.playlist(playlist_id)
         tracks = playlist['tracks']['items']
 
@@ -320,10 +318,22 @@ def recommendation(playlist_id, rec_playlist_id):
                 sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
             except Exception as e:
                 return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
-
-        return redirect(f"https://open.spotify.com/playlist/{rec_playlist_id}")
-
+    socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
     
+@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
+@require_spotify_token
+def recommendation(playlist_id, rec_playlist_id):
+    if session.get('spotify_token'):
+        request_id = str(uuid.uuid4())
+        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id)).start()
+        return render_template("recommendation_progress.html", request_id=request_id)
+    else:
+        return redirect(url_for("index"))
+
+@socketio.on("connect", namespace="/recommendation")
+def on_connect():
+    pass
+
 if __name__ == '__main__':
     env = os.environ.get('APP_ENV', 'test')
 

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generating Recommendations</title>
+</head>
+<body>
+    <h1>Generating recommendations, please wait...</h1>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        var request_id = "{{ request_id }}";
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
+        
+        socket.on('recommendation_done', function(data) {
+            if (data.request_id === request_id) {
+                window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;
+            }
+        });
+    </script>
+</body>
+</html>
