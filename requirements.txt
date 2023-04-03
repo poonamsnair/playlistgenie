@@ -1,9 +1,11 @@
-Flask
-Flask-Bootstrap
+flask
+flask-bootstrap
 spotipy
 pandas
 scikit-learn
-numpy
+redis
+rq
 Werkzeug
+Flask-Mail
 Stripe
 Gunicorn

@@ -4,7 +4,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import LeaveOneOut, GroupShuffleSplit, StratifiedKFold
 from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
@@ -18,6 +18,10 @@ import random
 import logging
 import os
 import numpy as np
+from sklearn.model_selection import train_test_split
+from math import ceil
+from flask_mail import Mail, Message
+from tasks import async_recommendation, q
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
@@ -35,7 +39,14 @@ def handle_unhandled_exception(e):
     error_code = getattr(e, 'code', 500)
     return render_template('error.html', error_code=error_code), error_code
 
+mail = Mail(app)
 
+def send_email(to, playlist_url):
+    msg = Message("Your Playlist Recommendations", sender="poonnnair@gmail.com", recipients=[to])
+    msg.body = f"Here's the link to your recommended playlist: {playlist_url}"
+    mail.send(msg)
+    
+    
 def inject_stripe_keys():
     if os.environ.get('APP_ENV', 'test') == 'production':
         publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
@@ -211,81 +222,90 @@ def create_playlist():
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
 
-@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
+@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
-        sp = spotipy.Spotify(auth=session['spotify_token'])
-        playlist = sp.playlist(playlist_id)
-        tracks = playlist['tracks']['items']
-        
-        ratings = session['ratings']
-
-        if not ratings:
-            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-
-        audio_features = [feature for feature in sp.audio_features(list(ratings.keys())) if feature is not None]
-
-        valid_keys = [feature['id'] for feature in audio_features]
-        valid_ratings = {key: ratings[key] for key in valid_keys}
-
-        playlist_df = pd.DataFrame(audio_features)
-        playlist_df['ratings'] = list(valid_ratings.values())
-
-        X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
-                          "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
-        y = playlist_df['ratings']
-
-        if len(X) <= 1:
-            return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
-        
-        scaler = MinMaxScaler()
-        X_scaled = scaler.fit_transform(X)
-
-        knn = KNeighborsClassifier()
-        max_neighbors = min(30, len(X) - 1)
-
-        param_grid = {
-            'n_neighbors': range(1, max_neighbors + 1),
-            'weights': ['uniform', 'distance'],
-            'metric': ['euclidean', 'manhattan', 'minkowski']
-        }
-
-        # Choose the appropriate cross-validator
-        n_splits = 5
-
-        min_samples_per_class = min(np.bincount(y))
-        if min_samples_per_class >= n_splits:
-            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+        if request.method == 'POST':
+            user_email = request.form.get('email')
+            if user_email:
+                job = q.enqueue(async_recommendation, user_email, playlist_id, rec_playlist_id, session['spotify_token'], session['spotify_username'], session['ratings'], job_timeout=3600)
+                return render_template('index.html', message="You will receive an email with your recommendations when they are ready.")
+            else:
+                return render_template('email_input.html', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id)
         else:
-            cv = LeaveOneOut()
-
-        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=cv, n_jobs=-1)
-        
-        try:
-            grid_search.fit(X_scaled, y)
-        except Exception as e:
-            return render_template('error.html', message=f"Error during model training: {str(e)}")
-
-        knn = grid_search.best_estimator_
-
-        rec_track_ids = set()
-        for track_id in playlist_df['id'].tolist():
-            try:
-                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
-                for track in rec_tracks:
-                    rec_track_ids.add(track['id'])
-            except Exception as e:
-                return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
-
-        track_chunks = [rec_track_ids[i:i+100] for i in range(0, len(rec_track_ids), 100)]
-
-        for track_chunk in track_chunks:
-            sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
-
-        return redirect(f"https://open.spotify.com/playlist/{rec_playlist_id}")
+            result = recommendation_function(playlist_id, rec_playlist_id, session['spotify_token'], session['spotify_username'], session['ratings'])
+            return redirect(result)
     else:
         return redirect(url_for('index'))
+    
+def recommendation_function(playlist_id, rec_playlist_id, spotify_token, spotify_username, ratings):
+    sp = spotipy.Spotify(auth=spotify_token)
+    playlist = sp.playlist(playlist_id)
+    tracks = playlist['tracks']['items']
+
+    audio_features = [feature for feature in sp.audio_features(list(ratings.keys())) if feature is not None]
+
+    valid_keys = [feature['id'] for feature in audio_features]
+    valid_ratings = {key: ratings[key] for key in valid_keys}
+
+    playlist_df = pd.DataFrame(audio_features)
+    playlist_df['ratings'] = list(valid_ratings.values())
+
+    X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
+                     "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
+    y = playlist_df['ratings']
+
+    if len(X) <= 1:
+        return None
+
+    scaler = MinMaxScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    knn = KNeighborsClassifier()
+    max_neighbors = min(30, len(X) - 1)
+
+    param_grid = {
+        'n_neighbors': range(1, max_neighbors + 1),
+        'weights': ['uniform', 'distance'],
+        'metric': ['euclidean', 'manhattan', 'minkowski']
+    }
+
+    n_splits = 5
+
+    min_samples_per_class = min(np.bincount(y))
+    if min_samples_per_class >= n_splits:
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    else:
+        cv = LeaveOneOut()
+
+    grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=cv, n_jobs=-1)
+
+    try:
+        grid_search.fit(X_scaled, y)
+    except Exception as e:
+        return None
+
+    knn = grid_search.best_estimator_
+
+    rec_track_ids = set()
+    recommendation_limit = ceil(len(playlist_df) / 2)
+
+    for track_id in playlist_df['id'].tolist():
+        try:
+            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=recommendation_limit)['tracks']
+            for track in rec_tracks:
+                rec_track_ids.add(track['id'])
+        except Exception as e:
+            return None
+
+    track_chunks = [rec_track_ids[i:i + 100] for i in range(0, len(rec_track_ids), 100)]
+
+    for track_chunk in track_chunks:
+        sp.user_playlist_add_tracks(user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
+
+    return f"https://open.spotify.com/playlist/{rec_playlist_id}"
+
     
 if __name__ == '__main__':
     env = os.environ.get('APP_ENV', 'test')
