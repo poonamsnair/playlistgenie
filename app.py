@@ -327,7 +327,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
             sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
-                socketio.emit("recommendation_error", {"request_id": request_id, "message": f"Error adding tracks to playlist: {str(e)}"}, namespace='/recommendation')
+            socketio.emit("recommendation_error", {"request_id": request_id, "message": f"Error adding tracks to playlist: {str(e)}"}, namespace='/recommendation')
             return
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
