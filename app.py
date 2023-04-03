@@ -241,12 +241,15 @@ def recommendation(playlist_id, rec_playlist_id):
         elif len(audio_features) > 100:
             return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
 
-        playlist_df = pd.DataFrame(audio_features)
-        playlist_df['ratings'] = [ratings[track_id] for track_id in playlist_df['id']]
+        # Convert audio_features to a list of dictionaries
+        playlist_data = []
+        for feature in audio_features:
+            feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
+            feature_dict['ratings'] = ratings[feature['id']]
+            playlist_data.append(feature_dict)
 
-        X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
-                          "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
-        y = playlist_df['ratings']
+        X = [list(d.values())[:-1] for d in playlist_data]
+        y = [d['ratings'] for d in playlist_data]
 
         scaler = MinMaxScaler()
 
@@ -278,13 +281,13 @@ def recommendation(playlist_id, rec_playlist_id):
             return render_template('error.html', message=f"Error during model training: {str(e)}")
 
         rec_track_ids = set()
-        for track_id in playlist_df['id'].tolist():
+        for track_id in [d['id'] for d in playlist_data]:
             try:
-                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
-            for track in rec_tracks:
-                rec_track_ids.add(track['id'])
+                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
+                for track in rec_tracks:
+                    rec_track_ids.add(track['id'])
             except Exception as e:
-        return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
+                return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
 
         if not rec_track_ids:
             return render_template('error.html', message="No recommendations were generated for this playlist.")
