@@ -9,6 +9,7 @@ from math import ceil
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import StratifiedKFold, LeaveOneOut, GridSearchCV
+from redis import Redis
 
 def send_email(to, playlist_url):
     msg = Message("Your Playlist Recommendations", sender="poonnnair@gmail.com", recipients=[to])
