@@ -10,6 +10,13 @@
             margin-bottom: 20px;
         }
     }
+
+    .card-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 250px; /* Adjust this value according to your design */
+    }
 </style>
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
@@ -19,7 +26,7 @@
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="playlist-card">
                     <div class="card-body">
-                        <h5 class="card-title">{{ playlist['name'] }}</h5>
+                        <h5 class="card-title" title="{{ playlist['name'] }}">{{ playlist['name'] }}</h5>
                         {% if track_count >= 5 %}
                             <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-playlist">Rate Playlist</a>
                         {% else %}
