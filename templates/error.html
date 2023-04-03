@@ -1,11 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    .content-container {
-        min-height: calc(100vh - var(--header-height) - var(--footer-height));
-    }
-</style>
 <div class="content-container">
     <h1>Error {{ error_code }}</h1>
     <p>{{ message }}</p>

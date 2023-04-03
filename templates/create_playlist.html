@@ -1,11 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    .content-container {
-        min-height: calc(100vh - var(--header-height) - var(--footer-height));
-    }
-</style>
 <div class="content-container">
     <h1 class="page-title">Create New Playlist</h1>
     <form method="POST" action="{{ url_for('create_playlist', playlist_id=session['playlist_id']) }}">
