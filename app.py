@@ -208,13 +208,11 @@ def save_ratings(playlist_id):
     
     
 
-@app.route('/create_playlist/', methods=['GET', 'POST'])
+@app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-def create_playlist():
+def create_playlist(playlist_id):
     if not session.get('spotify_token'):
         return redirect(url_for('index'))
-
-    playlist_id = request.args.get('playlist_id')
 
     if request.method == 'POST':
         playlist_name = request.form['playlist_name']
@@ -228,13 +226,13 @@ def create_playlist():
         sp = spotipy.Spotify(auth=session['spotify_token'])
         user_id = sp.me()['id']
         rec_playlist = sp.user_playlist_create(user=user_id, name=playlist_name)
-        session['rec_playlist_id'] = rec_playlist['id']
-        session['playlist_id'] = playlist_id
+        rec_playlist_id = rec_playlist['id']
+        session['rec_playlist_id'] = rec_playlist_id
 
-        # Redirect to the rating page for the original playlist
-        return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist['id']))
+        return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
+
 
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id):
@@ -321,7 +319,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
         except Exception as e:
             return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
 
-socketio.emit("recommendation_done", {"request_id": rec_playlist_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
+socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
