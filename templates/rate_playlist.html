@@ -27,10 +27,8 @@
     <button type="submit" class="btn btn-playlist" style="margin-bottom: 20px;">Save Ratings</button>
     <a href="{{ url_for('playlist_list') }}" class="btn btn-secondary" style="margin-bottom: 20px;">Back</a>
   </form>
-{% endblock %}
 
-
-  <script>
+ <script>
 const ratingStarsContainers = document.querySelectorAll('.rating-stars');
 
 ratingStarsContainers.forEach(container => {
@@ -72,4 +70,8 @@ ratingStarsContainers.forEach(container => {
 
 
 </script>
+
 {% endblock %}
+
+
+ 
