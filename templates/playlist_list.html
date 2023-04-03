@@ -11,7 +11,7 @@
                     <div class="card-body">
                         <h5 class="card-title">{{ playlist['name'] }}</h5>
                         {% if track_count >= 5 %}
-                            <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn-playlist">Rate Playlist</a>
+                            <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-playlist">Rate Playlist</a>
                         {% else %}
                             <button class="btn btn-secondary" disabled>Rate Playlist (less than 5 tracks)</button>
                         {% endif %}

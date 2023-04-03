@@ -97,7 +97,7 @@ footer {
 
 .btn-login:hover {
   background-color: #17a74a !important;
- color: #fff !important;
+  color: #fff !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
