@@ -5,4 +5,5 @@ pandas
 scikit-learn
 numpy
 Werkzeug
-stripe
+Stripe
+Gunicorn
