@@ -222,31 +222,33 @@ def recommendation(playlist_id, rec_playlist_id):
         sp = spotipy.Spotify(auth=session['spotify_token'])
         playlist = sp.playlist(playlist_id)
         tracks = playlist['tracks']['items']
-        
+
         ratings = session['ratings']
 
         if not ratings:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
-        audio_features = [feature for feature in sp.audio_features(list(ratings.keys())) if feature is not None]
+        track_ids = list(ratings.keys())
 
-        valid_keys = [feature['id'] for feature in audio_features]
-        valid_ratings = {key: ratings[key] for key in valid_keys}
+        # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
+        audio_features = sp.audio_features(track_ids)
+
+        # Remove NoneType audio features
+        audio_features = [feature for feature in audio_features if feature is not None]
+
+        if len(audio_features) < 50:
+            return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
+        elif len(audio_features) > 100:
+            return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
 
         playlist_df = pd.DataFrame(audio_features)
-        playlist_df['ratings'] = list(valid_ratings.values())
+        playlist_df['ratings'] = [ratings[track_id] for track_id in playlist_df['id']]
 
         X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
                           "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
         y = playlist_df['ratings']
 
-        if len(X) < 50:
-            return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
-        elif len(X) > 100:
-            return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
-
         scaler = MinMaxScaler()
-        X_scaled = scaler.fit_transform(X)
 
         knn = KNeighborsClassifier()
         max_neighbors = min(30, len(X) - 1)
@@ -266,33 +268,36 @@ def recommendation(playlist_id, rec_playlist_id):
         else:
             cv = LeaveOneOut()
 
-        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=cv, n_jobs=-1)
-        
+        grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
+                                   pre_dispatch='2*n_jobs', scoring='accuracy')
+
         try:
+            X_scaled = scaler.fit_transform(X)
             grid_search.fit(X_scaled, y)
         except Exception as e:
             return render_template('error.html', message=f"Error during model training: {str(e)}")
-
-        knn = grid_search.best_estimator_
 
         rec_track_ids = set()
         for track_id in playlist_df['id'].tolist():
             try:
                 rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
-                for track in rec_tracks:
-                    rec_track_ids.add(track['id'])
+            for track in rec_tracks:
+                rec_track_ids.add(track['id'])
             except Exception as e:
-                return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
+        return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
+
+        if not rec_track_ids:
+            return render_template('error.html', message="No recommendations were generated for this playlist.")
 
         track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
         for track_chunk in track_chunks:
-            sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
+            try:
+                sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
+            except Exception as e:
+                return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
 
         return redirect(f"https://open.spotify.com/playlist/{rec_playlist_id}")
-    else:
-        return redirect(url_for('index'))
-
 
     
 if __name__ == '__main__':
