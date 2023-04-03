@@ -10,20 +10,19 @@ body {
   color: #fff;
   font-size: 16px;
   background-repeat: no-repeat;
-  background-size: cover; /* Change to cover */
+  background-size: cover;
   background-attachment: fixed;
   position: relative;
   min-height: 100%;
 }
 
-/* Remove min-height from the container class */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0;
 }
 
-/* Add a wrapper class for the container and footer */
+/* Wrapper classes for the container and footer */
 .container-wrapper {
   display: flex;
   flex-direction: column;
@@ -38,18 +37,17 @@ body {
   padding: 0 20px;
 }
 
-
+/* Titles */
 h1, h5 {
   font-family: 'Montserrat', sans-serif;
   font-weight: 800;
-  color: #fff; /* Set titles to white */
+  color: #fff;
 }
 
 h1 {
   font-weight: bold;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   font-size: 48px;
-  color: white;
   text-align: center;
   margin-bottom: 30px;
 }
@@ -62,28 +60,13 @@ p {
   color: #fff !important;
 }
 
-
-/*header footer*/
-
-stripe-buy-button {
-  display: inline-flex !important;
-}
-
-stripe-buy-button iframe {
-  position: relative !important;
-  z-index: 1 !important;
-  width: 150px !important; /* Set the width of the button */
-  height: 44px !important; /* Set the height of the button */
-  background-color: #1DB954 !important; /* Set the background color to Spotify green */
-}
-
-
+/* Header and footer styles */
 footer {
   position: relative;
   bottom: 0;
   width: 100%;
   height: 60px;
-  background-color: #282828 !important; /* Change background color to match playlist cards */
+  background-color: #282828;
   color: #fff;
   text-align: center;
   padding-top: 20px;
@@ -91,12 +74,10 @@ footer {
 }
 
 .navbar {
-  background-color: #282828 !important; /* Change background color to match playlist cards */
+  background-color: #282828;
 }
 
-
 /* Button styles */
-
 .btn {
   display: inline-block;
   padding: 15px 40px;
@@ -108,37 +89,40 @@ footer {
   border-radius: 50px;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
   margin-top: 20px;
-  border: none !important;
-  border-color: none !important;
+  border: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.btn:focus {
-  outline: none;
-}
-
-
 .btn-primary {
-  background-color: #1DB954 !important;
-  border-color: none !important;
+  background-color: #1DB954;
 }
 
 .btn-primary:hover {
-  background-color: #18a64d !important;
-  color: #fff !important;
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2) !important;
-  border-color: none !important;
+  background-color: #18a64d;
+  color: #fff;
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-green {
-  background-color: #1DB954 !important;
-  color: #fff !important;
-  border: none !important;
+  background-color: #1DB954;
+  color: #fff;
+  border: none;
 }
 
 .btn-green:hover {
-  background-color: #17a74a !importany;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+  background-color: #17a74a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.stripe-buy-button {
+  display: inline-flex !important;
+}
+
+.stripe-buy-button iframe {
+  z-index: 1 !important;
+  width: 150px !important;
+  height: 44px !important;
+  background-color: #1DB954 !important;
 }
 
 

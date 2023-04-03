@@ -41,9 +41,9 @@
 
                 <!-- Replace the Upgrade link with the Stripe Buy Button -->
                 <stripe-buy-button
-                  buy-button-id="buy_btn_1MsarQIpDJwsO3dTL2dAcpaZ"
-                  publishable-key="pk_live_51MsPZqIpDJwsO3dTrsa4ANmBABwAcQsjmEl8Nz05rKdGe4P1uJjaanoufTY9IBnof4meHWPDSIwrhHdFx6KaZdtq00yOp2tJJx">
-                  Donate
+                    buy-button-id="{{ stripe_buy_button_id }}"
+                    publishable-key="{{ stripe_publishable_key }}">
+                    Donate
                 </stripe-buy-button>
               </li>
             {% endif %}
