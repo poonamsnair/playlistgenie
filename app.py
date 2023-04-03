@@ -251,11 +251,14 @@ def recommendation(playlist_id, rec_playlist_id):
         }
 
         # Choose the appropriate cross-validator
-        n_splits = 5
-        if len(np.unique(y)) >= n_splits:
-            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+        n_splits = min(5, len(np.unique(y)) - 1)
+        if n_splits > 1:
+            if len(np.unique(y)) >= n_splits:
+                cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+            else:
+                cv = KFold(n_splits=n_splits, shuffle=True, random_state=42)
         else:
-            cv = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+            return render_template('error.html', message="Not enough unique ratings for generating recommendations.")
 
         grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=cv, n_jobs=-1)
         
