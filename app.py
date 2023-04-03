@@ -20,7 +20,8 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 from math import ceil
-
+import threading
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
@@ -39,7 +40,24 @@ def handle_unhandled_exception(e):
     error_code = getattr(e, 'code', 500)
     return render_template('error.html', error_code=error_code), error_code
 
-    
+def timeout(seconds=30, error_message='Function call timed out'):
+    def decorator(func):
+        def _handle_timeout():
+            raise TimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            timer = threading.Timer(seconds, _handle_timeout)
+            timer.start()
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                timer.cancel()
+            return result
+
+        return wraps(func)(wrapper)
+
+    return decorator
+
 def inject_stripe_keys():
     if os.environ.get('APP_ENV', 'test') == 'production':
         publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
@@ -217,6 +235,7 @@ def create_playlist():
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
 @require_spotify_token
+@timeout(30, "The recommendation process took too long. Please try again.")
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
         sp = spotipy.Spotify(auth=session['spotify_token'])
