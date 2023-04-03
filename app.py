@@ -240,9 +240,11 @@ def recommendation(playlist_id, rec_playlist_id):
                           "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
         y = playlist_df['ratings']
 
-        if len(X) <= 1:
-            return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
-        
+        if len(X) < 50:
+            return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
+        elif len(X) > 100:
+            return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
+
         scaler = MinMaxScaler()
         X_scaled = scaler.fit_transform(X)
 
@@ -290,6 +292,7 @@ def recommendation(playlist_id, rec_playlist_id):
         return redirect(f"https://open.spotify.com/playlist/{rec_playlist_id}")
     else:
         return redirect(url_for('index'))
+
 
     
 if __name__ == '__main__':
