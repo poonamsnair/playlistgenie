@@ -1,11 +1,60 @@
 {% extends 'base.html' %}
+{% block head %}
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <style>
+    .simplified-hero {
+      background-image: url('{{ url_for('static', filename='images/loginbg.png') }}');
+      background-size: cover;
+      background-position: center;
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    .simplified-hero h1 {
+      font-size: 36px;
+    }
+
+    .simplified-hero h5 {
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    .sign-up-options {
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-login {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spotify-logo {
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+    }
+
+    /* Media query for mobile devices */
+    @media (max-width: 768px) {
+      .simplified-hero h1 {
+        font-size: 28px;
+      }
+
+      .simplified-hero h5 {
+        font-size: 16px;
+      }
+    }
+  </style>
+{% endblock %}
 {% block body_class %}fixed-footer{% endblock %}
 {% block content %}
-  <div class="simplified-hero" style="background-image: url('{{ url_for('static', filename='images/loginbg.png') }}');">
+  <div class="simplified-hero">
     <h1>Playlist Genie</h1>
     <h5>Discover new music tailored to your taste</h5>
     <div class="sign-up-options">
-      <a href="{{ auth_url }}" class="btn rounded-pill btn-login mr-3">
+      <a href="{{ auth_url }}" class="btn rounded-pill btn-login">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png" alt="Spotify Logo" class="spotify-logo">
         Log in with Spotify
       </a>

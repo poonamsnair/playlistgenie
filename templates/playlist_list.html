@@ -1,12 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<style>
+    .content-container {
+        min-height: calc(100vh - var(--header-height) - var(--footer-height));
+    }
+    @media (max-width: 767px) {
+        .playlists-h1 {
+            font-size: 24px;
+        }
+        .card-title {
+            font-size: 18px;
+        }
+        .playlist-card {
+            margin-bottom: 20px;
+        }
+    }
+</style>
+<div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
         {% for playlist in playlists['items'] %}
             {% set track_count = playlist['tracks']['total'] %}
-            <div class="col-md-4 mb-4">
+            <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="playlist-card">
                     <div class="card-body">
                         <h5 class="card-title">{{ playlist['name'] }}</h5>

@@ -200,35 +200,11 @@ footer {
   border-color: #1db954;
 }
 
-.spotify-logo {
-  height: 40px;
-  margin-right: 10px;
-}
-
-
-.simplified-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  width: 100%;
-  text-align: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-  box-sizing: border-box; /* To ensure padding and border are included in the width */
-  margin: 0;
-  padding: 0;
-}
-
-
 
 .sign-up-options {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px; /* Set the gap between buttons */
 }
 
 .btn-green {
