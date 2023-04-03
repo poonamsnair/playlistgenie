@@ -5,6 +5,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from functools import wraps
@@ -216,16 +217,13 @@ def recommendation(playlist_id, rec_playlist_id):
         playlist = sp.playlist(playlist_id)
         tracks = playlist['tracks']['items']
         
-        # Get the ratings from the session instead of URL arguments
         ratings = session['ratings']
 
         if not ratings:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-        
-        # Filter out None values from audio_features before creating the DataFrame
+
         audio_features = [feature for feature in sp.audio_features(list(ratings.keys())) if feature is not None]
 
-        # Create a new dictionary with only valid keys (non-None audio features)
         valid_keys = [feature['id'] for feature in audio_features]
         valid_ratings = {key: ratings[key] for key in valid_keys}
 
@@ -235,52 +233,56 @@ def recommendation(playlist_id, rec_playlist_id):
         X = playlist_df[["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key",
                           "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]]
         y = playlist_df['ratings']
-        
+
         if len(X) <= 1:
             return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
-        max_neighbors = min(30, len(X) - 1)
-
-
-        # Scale the features
+        
         scaler = MinMaxScaler()
         X_scaled = scaler.fit_transform(X)
 
-       # Use KNeighborsClassifier and optimize its hyperparameters with GridSearchCV
         knn = KNeighborsClassifier()
-        max_neighbors = min(30, len(X) - 1)  # Set the maximum number of neighbors to the minimum of 30 and the number of samples minus 1
+        max_neighbors = min(30, len(X) - 1)
+
         param_grid = {
             'n_neighbors': range(1, max_neighbors + 1),
             'weights': ['uniform', 'distance'],
             'metric': ['euclidean', 'manhattan', 'minkowski']
         }
-    
-        stratified_kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    
-        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=stratified_kfold, n_jobs=-1)
-        grid_search.fit(X_scaled, y)
+
+        # Choose the appropriate cross-validator
+        n_splits = 5
+        if len(np.unique(y)) >= n_splits:
+            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+        else:
+            cv = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+
+        grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=cv, n_jobs=-1)
+        
+        try:
+            grid_search.fit(X_scaled, y)
+        except Exception as e:
+            return render_template('error.html', message=f"Error during model training: {str(e)}")
+
         knn = grid_search.best_estimator_
 
         rec_track_ids = set()
         for track_id in playlist_df['id'].tolist():
-            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
-        for track in rec_tracks:
-            rec_track_ids.add(track['id'])
-        rec_track_ids = list(rec_track_ids)
+            try:
+                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_df)/2))['tracks']
+                for track in rec_tracks:
+                    rec_track_ids.add(track['id'])
+            except Exception as e:
+                return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
 
-        # Split the list of track IDs into chunks of 100 tracks each
         track_chunks = [rec_track_ids[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
-        # Add generated tracks to the new playlist in chunks of 100 tracks at a time
         for track_chunk in track_chunks:
             sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
 
         return redirect(f"https://open.spotify.com/playlist/{rec_playlist_id}")
     else:
-        # User is not logged in, redirect to index
         return redirect(url_for('index'))
-
-
-
+    
 if __name__ == '__main__':
     env = os.environ.get('APP_ENV', 'test')
 
