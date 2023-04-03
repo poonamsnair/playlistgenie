@@ -11,6 +11,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import StratifiedKFold, LeaveOneOut, GridSearchCV
 from redis import Redis
 
+mail = Mail(app)
+
 def send_email(to, playlist_url):
     msg = Message("Your Playlist Recommendations", sender="poonnnair@gmail.com", recipients=[to])
     msg.body = f"Here's the link to your recommended playlist: {playlist_url}"
