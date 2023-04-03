@@ -239,89 +239,91 @@ def create_playlist():
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id):
     sp = spotipy.Spotify(auth=session['spotify_token'])
-        playlist = sp.playlist(playlist_id)
-        tracks = playlist['tracks']['items']
+    playlist = sp.playlist(playlist_id)
+    tracks = playlist['tracks']['items']
 
-        ratings = session['ratings']
+    ratings = session['ratings']
 
-        if not ratings:
-            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+    if not ratings:
+        return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
-        track_ids = list(ratings.keys())
+    track_ids = list(ratings.keys())
 
-        # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
-        audio_features = sp.audio_features(track_ids)
+    # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
+    audio_features = sp.audio_features(track_ids)
 
-        # Remove NoneType audio features
-        audio_features = [feature for feature in audio_features if feature is not None]
+    # Remove NoneType audio features
+    audio_features = [feature for feature in audio_features if feature is not None]
 
-        if len(audio_features) < 50:
-            return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
-        elif len(audio_features) > 100:
-            return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
+    if len(audio_features) < 50:
+        return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
+    elif len(audio_features) > 100:
+        return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
 
-        # Convert audio_features to a list of dictionaries
-        playlist_data = []
-        for feature in audio_features:
-            feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
-            feature_dict['ratings'] = ratings[feature['id']]
-            playlist_data.append(feature_dict)
+    # Convert audio_features to a list of dictionaries
+    playlist_data = []
+    for feature in audio_features:
+        feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
+        feature_dict['ratings'] = ratings[feature['id']]
+        playlist_data.append(feature_dict)
 
-        feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
+    feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
-        X = [[d[key] for key in feature_keys] for d in playlist_data]
-        y = [d['ratings'] for d in playlist_data]
+    X = [[d[key] for key in feature_keys] for d in playlist_data]
+    y = [d['ratings'] for d in playlist_data]
 
-        scaler = MinMaxScaler()
+    scaler = MinMaxScaler()
 
-        knn = KNeighborsClassifier()
-        max_neighbors = min(30, len(X) - 1)
+    knn = KNeighborsClassifier()
+    max_neighbors = min(30, len(X) - 1)
 
-        param_grid = {
-            'n_neighbors': range(1, max_neighbors + 1),
-            'weights': ['uniform', 'distance'],
-            'metric': ['euclidean', 'manhattan', 'minkowski']
-        }
+    param_grid = {
+        'n_neighbors': range(1, max_neighbors + 1),
+        'weights': ['uniform', 'distance'],
+        'metric': ['euclidean', 'manhattan', 'minkowski']
+    }
 
-        # Choose the appropriate cross-validator
-        n_splits = 5
+    # Choose the appropriate cross-validator
+    n_splits = 5
 
-        min_samples_per_class = min(np.bincount(y))
-        if min_samples_per_class >= n_splits:
-            cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-        else:
-            cv = LeaveOneOut()
+    min_samples_per_class = min(np.bincount(y))
+    if min_samples_per_class >= n_splits:
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    else:
+        cv = LeaveOneOut()
 
-        grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
-                                   pre_dispatch='2*n_jobs', scoring='accuracy')
+    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
+                               pre_dispatch='2*n_jobs', scoring='accuracy')
 
+    try:
+        X_scaled = scaler.fit_transform(X)
+        grid_search.fit(X_scaled, y)
+    except Exception as e:
+        return render_template('error.html', message=f"Error during model training: {str(e)}")
+
+    rec_track_ids = set()
+    for track_id in [d['id'] for d in playlist_data]:
         try:
-            X_scaled = scaler.fit_transform(X)
-            grid_search.fit(X_scaled, y)
+            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
+            for track in rec_tracks:
+                rec_track_ids.add(track['id'])
         except Exception as e:
-            return render_template('error.html', message=f"Error during model training: {str(e)}")
+            return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
 
-        rec_track_ids = set()
-        for track_id in [d['id'] for d in playlist_data]:
-            try:
-                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
-                for track in rec_tracks:
-                    rec_track_ids.add(track['id'])
-            except Exception as e:
-                return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
+    if not rec_track_ids:
+        return render_template('error.html', message="No recommendations were generated for this playlist.")
 
-        if not rec_track_ids:
-            return render_template('error.html', message="No recommendations were generated for this playlist.")
+    track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
-        track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
+    for track_chunk in track_chunks:
+    try:
+        sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
+    except Exception as e:
+        return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
 
-        for track_chunk in track_chunks:
-            try:
-                sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
-            except Exception as e:
-                return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
-    socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-    
+socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
+
+
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
 @require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
