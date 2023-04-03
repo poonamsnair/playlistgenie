@@ -93,38 +93,26 @@ footer {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.btn-primary {
+.btn-playlist {
   background-color: #1DB954;
 }
 
-.btn-primary:hover {
+.btn-playlist:hover {
   background-color: #18a64d;
   color: #fff;
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
-.btn-green {
+.btn-login {
   background-color: #1DB954;
   color: #fff;
   border: none;
 }
 
-.btn-green:hover {
+.btn-login:hover {
   background-color: #17a74a;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
-
-.stripe-buy-button {
-  display: inline-flex !important;
-}
-
-.stripe-buy-button iframe {
-  z-index: 1 !important;
-  width: 150px !important;
-  height: 44px !important;
-  background-color: #1DB954 !important;
-}
-
 
 /* Loader styles */
 .loader-container {
@@ -138,8 +126,6 @@ footer {
   justify-content: center;
   z-index: 99999; /* Set a high z-index value */
 }
-
-
 
 .loader-wrapper {
   position: fixed;
