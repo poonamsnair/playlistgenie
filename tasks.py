@@ -1,7 +1,6 @@
 from rq import Queue
 from worker import conn
 from flask_mail import Message
-from app import mail
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
