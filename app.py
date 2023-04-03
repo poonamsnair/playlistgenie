@@ -316,10 +316,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
     for track_chunk in track_chunks:
-    try:
-        sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
-    except Exception as e:
-        return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
+        try:
+            sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
+        except Exception as e:
+            return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
 
 socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
