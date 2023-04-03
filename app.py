@@ -231,7 +231,7 @@ def recommendation(playlist_id, rec_playlist_id):
         if request.method == 'POST':
             user_email = request.form.get('email')
             if user_email:
-                job = q.enqueue(async_recommendation, user_email, playlist_id, rec_playlist_id, session['spotify_token'], session['spotify_username'], session['ratings'], job_timeout=3600)
+                job = q.enqueue(async_recommendation, user_email, playlist_id, rec_playlist_id, session['spotify_token'], session['spotify_username'], session['ratings'], job_timeout=7200)
                 return render_template('index.html', message="You will receive an email with your recommendations when they are ready.")
             else:
                 return render_template('email_input.html', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id)
