@@ -13,7 +13,7 @@
       }
     }
   </style>
-<link rel="stylesheet" href="{% static 'lavalamp.css' %}">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', lavalamp.css) }}">
 {% endblock %}
 
 {% block body_class %}fixed-footer lava-lamp{% endblock %}
@@ -28,9 +28,8 @@
       </a>
     </div>
   </div>
-{% endblock %}
 
-{% block scripts %}
+ <script>
   function createBubble(x, y, radius) {
   const bubble = document.createElement('div');
   bubble.style.position = 'absolute';
@@ -57,4 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     createBubble(x, y, radius);
   }, 500);
 });
+     </script>
+
 {% endblock %}
+
