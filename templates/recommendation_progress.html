@@ -1,22 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generating Recommendations</title>
-</head>
-<body>
-    <h1>Generating recommendations, please wait...</h1>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <script>
-        var request_id = "{{ request_id }}";
-        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
-        
-        socket.on('recommendation_done', function(data) {
-            if (data.request_id === request_id) {
-                window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;
-            }
-        });
-    </script>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-container">
+    <h1 class="page-title">Generating Recommendations</h1>
+    <p>Please wait while we generate recommendations for your playlist...</p>
+    <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+    </div>
+    <div id="error-message" style="display: none;"></div>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+<script>
+    var request_id = "{{ request_id }}";
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
+
+    socket.on('recommendation_done', function(data) {
+        if (data.request_id === request_id) {
+            window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;
+        }
+    });
+
+    socket.on('recommendation_error', function(data) {
+        if (data.request_id === request_id) {
+            var errorMessage = document.getElementById("error-message");
+            errorMessage.innerHTML = "Error: " + data.message;
+            errorMessage.style.display = "block";
+        }
+    });
+</script>
+{% endblock %}
