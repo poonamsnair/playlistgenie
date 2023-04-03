@@ -79,23 +79,25 @@ footer {
 
 /* Button styles */
 .btn-playlist {
-  background-color: #1DB954;
+  background-color: #1DB954 !important;
+  color: #fff !important;
 }
 
 .btn-playlist:hover {
-  background-color: #18a64d;
+  background-color: #18a64d !important;
   color: #fff;
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 .btn-login {
-  background-color: #1DB954;
-  color: #fff;
+  background-color: #1DB954 !important;
+  color: #fff !important;
   border: none;
 }
 
 .btn-login:hover {
-  background-color: #17a74a;
+  background-color: #17a74a !important;
+ color: #fff !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
