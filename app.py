@@ -15,6 +15,7 @@ import stripe
 import random
 import logging
 import os
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
@@ -84,9 +85,25 @@ def index():
     if session.get('spotify_token'):
         return redirect(url_for('playlists'))
 
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+    # Get the current domain from the request headers.
+    current_domain = request.headers['Host']
+    base_url = f'https://{current_domain}'
+
+    # Determine the correct redirect URI based on the current domain.
+    if current_domain == 'playlistgenie.app':
+        redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI_ALT')
+    else:
+        redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI')
+
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
+                                client_secret=SPOTIPY_CLIENT_SECRET,
+                                redirect_uri=redirect_uri, scope=SCOPE)
     auth_url = auth_manager.get_authorize_url()
+
+    # Add the domain to the auth_url
+    parsed_auth_url = urlparse(auth_url)
+    auth_url = parsed_auth_url._replace(scheme='https', netloc=current_domain).geturl()
+
     return render_template('index.html', auth_url=auth_url)
 
 
@@ -99,10 +116,16 @@ def logout():
 
 @app.route('/callback/')
 def callback():
-    domain = request.headers['Host']
-    redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI')
-    if domain == 'playlistgenie.app':
+    # Get the current domain from the request headers.
+    current_domain = request.headers['Host']
+    base_url = f'https://{current_domain}'
+
+    # Determine the correct redirect URI based on the current domain.
+    if current_domain == 'playlistgenie.app':
         redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI_ALT')
+    else:
+        redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI')
+
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=redirect_uri, scope=SCOPE)
     token_info = auth_manager.get_access_token(request.args.get('code'))
