@@ -9,6 +9,10 @@ html, body {
     min-height: calc(100vh - 50px); /* 50px is the height of your footer */
 }
 
+.header-spacing {
+  margin-bottom: 30px;
+}
+
 body {
   margin: 0;
   padding: 0;
