@@ -13,20 +13,38 @@
       }
     }
       
-      body {
-      background-image: url({{ url_for('static', filename='images/loginbg.png') }});
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: cover;
+    body {
+      background-color: #17181c;
+      background-image: radial-gradient(circle at 20% 20%, #ff9298, #e4008e 50%, #17181c);
+      overflow: hidden;
     }
       
+    .lava-lamp {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .lava-lamp canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    }
   </style>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', lavalamp.css) }}">
 {% endblock %}
 
 {% block body_class %}fixed-footer lava-lamp{% endblock %}
+
 {% block content %}
-  <div class="simplified-hero" style="position: relative; z-index: 2;">
+  <div class="lava-lamp">
+    <canvas id="bubble"></canvas>
+  </div>
+
+  <div class="simplified-hero">
     <h1>Playlist Genie</h1>
     <h5>Discover new music tailored to your taste</h5>
     <div class="sign-up-options">
@@ -37,34 +55,21 @@
     </div>
   </div>
 
- <script>
-  function createBubble(x, y, radius) {
-  const bubble = document.createElement('div');
-  bubble.style.position = 'absolute';
-  bubble.style.width = radius * 2 + 'px';
-  bubble.style.height = radius * 2 + 'px';
-  bubble.style.borderRadius = '50%';
-  bubble.style.background = 'rgba(255, 255, 255, 0.2)';
-  bubble.style.top = y - radius + 'px';
-  bubble.style.left = x - radius + 'px';
+  <script src="{{ url_for('static', lavalamp.js) }}"></script>
+  <script>
+    var screen = ge1doot.screen.init("bubble", null, true),
+        ctx = screen.ctx;
 
-  document.body.appendChild(bubble);
+    screen.resize();
 
-  setTimeout(() => {
-    bubble.remove();
-  }, 3000);
-}
+    var lava0 = new LavaLamp(screen.width, screen.height, 6, "#FF9298", "#E4008E");
 
-document.addEventListener('DOMContentLoaded', () => {
-  setInterval(() => {
-    const x = Math.random() * window.innerWidth;
-    const y = Math.random() * window.innerHeight; // Updated this line
-    const radius = Math.random() * 20 + 10;
+    function render() {
+      ctx.clearRect(0, 0, screen.width, screen.height);
+      lava0.renderMetaballs();
+      requestAnimationFrame(render);
+    }
 
-    createBubble(x, y, radius);
-  }, 500);
-});
-     </script>
-
+    render();
+  </script>
 {% endblock %}
-
