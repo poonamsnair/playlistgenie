@@ -5,7 +5,6 @@ html, body {
   padding: 0;
 }
 
-
 body {
   margin: 0;
   padding: 0;
@@ -14,7 +13,6 @@ body {
   color: #fff;
   font-size: 16px;
   background-repeat: no-repeat;
-  background-size: cover;
   background-attachment: fixed;
   position: relative;
   min-height: 100%;
@@ -175,13 +173,18 @@ footer {
   height: 100vh;
   width: 100%;
   text-align: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%; /* Stretch the image */
+  background-position: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 .sign-up-options {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px; /* Set the gap between buttons */
 }
 
 .btn-green {
