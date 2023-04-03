@@ -33,6 +33,24 @@ def handle_unhandled_exception(e):
     return render_template('error.html', error_code=error_code), error_code
 
 
+def inject_stripe_keys():
+    if os.environ.get('APP_ENV', 'test') == 'production':
+        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+        buy_button_id = os.environ.get('STRIPE_BUY_BUTTON_ID')
+    else:
+        publishable_key = 'pk_test_51MsPZqIpDJwsO3dTZhBli2IN4yPQgbAsxtj1AWnXWlH8rIvd2rdLEoefmBKXDCLeyPN3O9bDjKirR8VUgHS1zyFk00lbJ3ti7o'
+        buy_button_id = 'buy_btn_1MsY4QIpDJwsO3dTMuyXa9KC'
+
+    return {
+        'stripe_publishable_key': publishable_key,
+        'stripe_buy_button_id': buy_button_id,
+    }
+
+@app.context_processor
+def inject_vars():
+    vars = inject_stripe_keys()
+    return vars
+
 def get_spotify_client(access_token):
     client = spotipy.Spotify(auth=access_token)
     return client
