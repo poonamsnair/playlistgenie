@@ -248,7 +248,9 @@ def recommendation(playlist_id, rec_playlist_id):
             feature_dict['ratings'] = ratings[feature['id']]
             playlist_data.append(feature_dict)
 
-        X = [list(d.values())[:-1] for d in playlist_data]
+        feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
+
+        X = [[d[key] for key in feature_keys] for d in playlist_data]
         y = [d['ratings'] for d in playlist_data]
 
         scaler = MinMaxScaler()
