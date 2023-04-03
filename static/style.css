@@ -34,8 +34,10 @@ body {
   margin-top: auto;
 }
 
-footer {
- position:fixed;
+body.fixed-footer footer {
+  position: fixed !important;
+  bottom: 0;
+  width: 100%;
 }
 
 .inner-container {
