@@ -1,48 +1,8 @@
-async-timeout==4.0.2
-brotlipy==0.7.0
-certifi==2022.12.7
-cffi @ file:///Users/runner/miniforge3/conda-bld/cffi_1613413910603/work
-chardet @ file:///Users/runner/miniforge3/conda-bld/chardet_1610093454858/work
-click==8.1.3
-conda==23.1.0
-conda-package-handling @ file:///Users/runner/miniforge3/conda-bld/conda-package-handling_1602876806364/work
-cryptography @ file:///Users/runner/miniforge3/conda-bld/cryptography_1616851494586/work
-docopt==0.6.2
-dominate==2.7.0
-Flask==2.2.3
+Flask==2.1.1
 Flask-Bootstrap==3.3.7.1
-gunicorn==20.1.0
-idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1593328102638/work
-importlib-metadata==6.1.0
-itsdangerous==2.1.2
-Jinja2==3.1.2
-joblib==1.2.0
-MarkupSafe==2.1.2
-numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1643009384932/work
-pandas==1.5.3
-pipreqs==0.4.11
-pluggy @ file:///home/conda/feedstock_root/build_artifacts/pluggy_1667232663820/work
-pycosat @ file:///Users/runner/miniforge3/conda-bld/pycosat_1610094841871/work
-pycparser @ file:///home/conda/feedstock_root/build_artifacts/pycparser_1593275161868/work
-pyOpenSSL @ file:///home/conda/feedstock_root/build_artifacts/pyopenssl_1608055815057/work
-PySocks @ file:///Users/runner/miniforge3/conda-bld/pysocks_1610291460269/work
-python-dateutil==2.8.2
-pytz==2023.3
-redis==4.5.4
-requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1608156231189/work
-ruamel-yaml-conda @ file:///Users/runner/miniforge3/conda-bld/ruamel_yaml_1611943386799/work
-ruamel.yaml @ file:///Users/runner/miniforge3/conda-bld/ruamel.yaml_1666827345171/work
-ruamel.yaml.clib @ file:///Users/runner/miniforge3/conda-bld/ruamel.yaml.clib_1670412837369/work
-scikit-learn==1.2.2
-scipy @ file:///Users/runner/miniforge3/conda-bld/scipy_1637806880936/work
-six @ file:///home/conda/feedstock_root/build_artifacts/six_1590081179328/work
-spotipy==2.22.1
-stripe==5.4.0
-threadpoolctl==3.1.0
-toolz @ file:///home/conda/feedstock_root/build_artifacts/toolz_1657485559105/work
-tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1614982742480/work
-urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1615828766818/work
-visitor==0.1.3
-Werkzeug==2.2.3
-yarg==0.1.9
-zipp==3.15.0
+spotipy==2.19.0
+pandas==1.3.4
+scikit-learn==1.0.1
+numpy==1.21.2
+Werkzeug==2.1.0
+stripe==2.63.0
