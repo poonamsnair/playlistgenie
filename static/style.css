@@ -27,11 +27,15 @@ body {
 .container-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 4rem);
+  min-height: calc(100vh - 4rem - 60px); /* subtract the height of the footer from the viewport height */
+  margin-bottom: 60px; /* add a margin to push the container-wrapper up */
 }
 
 .footer-wrapper {
-  margin-top: auto;
+  height: 60px;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
 }
 
 .inner-container {
