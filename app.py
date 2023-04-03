@@ -234,6 +234,15 @@ def create_playlist(playlist_id):
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
 
+@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
+@require_spotify_token
+def recommendation(playlist_id, rec_playlist_id):
+    if session.get('spotify_token'):
+        request_id = str(uuid.uuid4())
+        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id)).start()
+        return render_template("recommendation_progress.html", request_id=request_id)
+    else:
+        return redirect(url_for("index"))
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id):
     sp = spotipy.Spotify(auth=session['spotify_token'])
@@ -317,20 +326,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
         try:
             sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
-            return render_template('error.html', message=f"Error adding tracks to playlist: {str(e)}")
-
-socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-
-
-@app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
-@require_spotify_token
-def recommendation(playlist_id, rec_playlist_id):
-    if session.get('spotify_token'):
-        request_id = str(uuid.uuid4())
-        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id)).start()
-        return render_template("recommendation_progress.html", request_id=request_id)
-    else:
-        return redirect(url_for("index"))
+            logging.error(f"Error adding tracks to playlist: {str(e)}")
+                socketio.emit("recommendation_error", {"request_id": request_id, "message": f"Error adding tracks to playlist: {str(e)}"}, namespace='/recommendation')
+            return
+    socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
