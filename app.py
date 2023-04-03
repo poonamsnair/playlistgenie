@@ -16,6 +16,7 @@ import stripe
 import random
 import logging
 import os
+import numpy as np
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
