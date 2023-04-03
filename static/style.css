@@ -32,7 +32,10 @@ body {
 
 .footer-wrapper {
   margin-top: auto;
-  position: fixed;
+}
+
+footer {
+ position:fixed;
 }
 
 .inner-container {
