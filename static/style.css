@@ -241,6 +241,11 @@ footer {
   text-decoration: underline;
 }
 
+  .logout-link:hover {
+    color: #1DB954 !important;
+  }
+
+
 /* Playlist page specific styles */
 
 .container {
