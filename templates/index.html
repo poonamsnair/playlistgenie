@@ -44,11 +44,9 @@
         speed: 0.5
       });
 
-      // Adjust the zIndex of the canvas created by bubbly-bg library
-      bubblyCanvas.style.zIndex = 1;
-      bubblyCanvas.style.position = 'absolute';
-      bubblyCanvas.style.top = 0;
-      bubblyCanvas.style.left = 0;
+     // Adjust the zIndex and position of the canvas created by bubbly-bg library
+      bubblyCanvas.style.zIndex = -1;
+      bubblyCanvas.style.position = 'fixed';
     });
   </script>
 {% endblock %}
