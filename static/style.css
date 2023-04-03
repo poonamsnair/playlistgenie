@@ -48,6 +48,13 @@ body.fixed-footer footer {
   width: 100%;
 }
 
+body.fixed-footer {
+          background-image: url({{ url_for('static', filename='images/loginbg.png') }}) !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-size: cover !important;
+    
+}
 .inner-container {
   padding: 0 20px;
 }
