@@ -99,8 +99,12 @@ def logout():
 
 @app.route('/callback/')
 def callback():
+    domain = request.headers['Host']
+    redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI')
+    if domain == 'playlistgenie.app':
+        redirect_uri = os.environ.get('SPOTIPY_REDIRECT_URI_ALT')
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+                                redirect_uri=redirect_uri, scope=SCOPE)
     token_info = auth_manager.get_access_token(request.args.get('code'))
     session['spotify_token_info'] = token_info
     session['spotify_token'] = token_info.get('access_token')
@@ -111,6 +115,7 @@ def callback():
         'playlist_count': 0
     }
     return redirect(url_for('index'))
+
 
 
 @app.route('/playlists/')
