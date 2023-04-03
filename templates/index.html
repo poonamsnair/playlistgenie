@@ -12,39 +12,18 @@
         font-size: 16px;
       }
     }
-      
-    body {
-      background-color: #17181c;
-      background-image: radial-gradient(circle at 20% 20%, #ff9298, #e4008e 50%, #17181c);
-      overflow: hidden;
-    }
-      
-    .lava-lamp {
-      position: relative;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .lava-lamp canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
+      body {
+      background-image: url({{ url_for('static', filename='images/loginbg.png') }}) !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-size: cover !important;
     }
   </style>
-  <link rel="stylesheet" type="text/css" href="{{ url_for('static', lavalamp.css) }}">
 {% endblock %}
 
-{% block body_class %}fixed-footer lava-lamp{% endblock %}
-
+{% block body_class %}fixed-footer{% endblock %}
 {% block content %}
-  <div class="lava-lamp">
-    <canvas id="bubble"></canvas>
-  </div>
-
-  <div class="simplified-hero">
+  <div class="simplified-hero" style="position: relative; z-index: 2;">
     <h1>Playlist Genie</h1>
     <h5>Discover new music tailored to your taste</h5>
     <div class="sign-up-options">
@@ -54,22 +33,3 @@
       </a>
     </div>
   </div>
-
-  <script src="{{ url_for('static', lavalamp.js) }}"></script>
-  <script>
-    var screen = ge1doot.screen.init("bubble", null, true),
-        ctx = screen.ctx;
-
-    screen.resize();
-
-    var lava0 = new LavaLamp(screen.width, screen.height, 6, "#FF9298", "#E4008E");
-
-    function render() {
-      ctx.clearRect(0, 0, screen.width, screen.height);
-      lava0.renderMetaballs();
-      requestAnimationFrame(render);
-    }
-
-    render();
-  </script>
-{% endblock %}
