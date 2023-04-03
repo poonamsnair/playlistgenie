@@ -237,8 +237,8 @@ def recommendation(playlist_id, rec_playlist_id):
         y = playlist_df['ratings']
         
         if len(X) <= 1:
-    return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
-max_neighbors = min(30, len(X) - 1)
+            return render_template('error.html', message="Not enough valid tracks for generating recommendations.")
+        max_neighbors = min(30, len(X) - 1)
 
 
         # Scale the features
