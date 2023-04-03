@@ -25,11 +25,12 @@ def recommendation_function(playlist_id, rec_playlist_id, spotify_token, spotify
     playlist = sp.playlist(playlist_id)
     
     # Use a generator to stream the tracks in batches
-    tracks = stream_tracks(playlist['tracks'], sp, batch_size=50)
+    batch_size = 50
+    track_batches = iter([playlist['tracks'][i:i+batch_size] for i in range(0, len(playlist['tracks']), batch_size)])
     
     valid_ratings = {}
     audio_features = []
-    for batch in tracks:
+    for batch in track_batches:
         # Only get audio features for tracks that have been rated
         batch_valid_keys = [t['track']['id'] for t in batch if t['track']['id'] in ratings]
         batch_audio_features = [feature for feature in sp.audio_features(batch_valid_keys) if feature is not None]
@@ -82,14 +83,16 @@ def recommendation_function(playlist_id, rec_playlist_id, spotify_token, spotify
     rec_track_ids = set()
     recommendation_limit = ceil(len(playlist_df) / 2)
 
-    for track in stream_tracks(playlist['tracks'], sp, batch_size=50):
-        track_id = track['track']['id']
-        try:
-            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=recommendation_limit)['tracks']
-            for rec_track in rec_tracks:
-                rec_track_ids.add(rec_track['id'])
-        except Exception as e:
-            continue
+    track_batches = iter([playlist['tracks'][i:i+batch_size] for i in range(0, len(playlist['tracks']), batch_size)])
+    for batch in track_batches:
+        for track in batch:
+            track_id = track['track']['id']
+            try:
+                rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=recommendation_limit)['tracks']
+                for rec_track in rec_tracks:
+                    rec_track_ids.add(rec_track['id'])
+            except Exception as e:
+                continue
 
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
