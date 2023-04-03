@@ -21,7 +21,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from math import ceil
 from flask_mail import Mail, Message
-from tasks import async_recommendation, q, send_email
+from tasks import recommendation_function, async_recommendation, q, send_email
 
 app = Flask(__name__)
 app.secret_key = 'POO123'
