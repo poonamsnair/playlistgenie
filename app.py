@@ -282,7 +282,7 @@ def recommendation(playlist_id, rec_playlist_id):
             except Exception as e:
                 return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
 
-        track_chunks = [rec_track_ids[i:i+100] for i in range(0, len(rec_track_ids), 100)]
+        track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
         for track_chunk in track_chunks:
             sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
