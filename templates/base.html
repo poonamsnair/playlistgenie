@@ -30,6 +30,9 @@
 {% if not request.path == url_for('index') %}
       <nav class="navbar navbar-expand-lg navbar-light">
         <a class="navbar-brand text-white" href="#">Playlist Genie</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon text-white bi bi-list"></span>
+        </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ml-auto">
             {% if 'user' in session %}
@@ -53,7 +56,7 @@
         </div>
       </nav>
 {% endif %}
-
+      
 <main class="main-container">
  <div class="container-wrapper">
     <div class="container">
