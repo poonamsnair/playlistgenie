@@ -1,6 +1,10 @@
-html {
+html, body {
   height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
+
 
 body {
   margin: 0;
@@ -202,7 +206,11 @@ footer {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
+  box-sizing: border-box; /* To ensure padding and border are included in the width */
+  margin: 0;
+  padding: 0;
 }
+
 
 
 .sign-up-options {
