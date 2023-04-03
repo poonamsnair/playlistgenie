@@ -199,7 +199,6 @@ footer {
   height: 100vh;
   width: 100%;
   text-align: center;
-  background-image: url('{{ url_for('static', filename='images/loginbg.png') }}');
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
