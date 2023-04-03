@@ -49,7 +49,7 @@ body.fixed-footer footer {
 }
 
 body.fixed-footer {
-          background-image: background-image: url("../images/loginbg.png") !important;
+      background-image: url("/static/images/loginbg.png") !important;
       background-position: center !important;
       background-repeat: no-repeat !important;
       background-size: cover !important;
