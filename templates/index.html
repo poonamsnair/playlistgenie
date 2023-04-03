@@ -33,10 +33,11 @@
 
 {% block scripts %}
   <script>
-document.addEventListener("DOMContentLoaded", initBubbleEffect);
+    (function() {
+      document.addEventListener("DOMContentLoaded", initBubbleEffect);
 
-function initBubbleEffect() {
-  ;(function() {
+      function initBubbleEffect() {
+        ;(function() {
 
   "use strict";
 
@@ -300,6 +301,7 @@ function initBubbleEffect() {
   run();
 
 })();
-}
+      }
+    })();
   </script>
 {% endblock %}
