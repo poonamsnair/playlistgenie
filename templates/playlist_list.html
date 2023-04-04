@@ -8,6 +8,7 @@
   }
 }
 </style>
+
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
@@ -32,7 +33,7 @@
     </div>
     <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
-            <li class="page-item {% if offset == 0 %}disabled{% endif %}">
+            <li class="page-item page-item-back {% if offset == 0 %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('playlists', offset=previous_offset) }}">Back</a>
             </li>
             {% for i in range((total_playlists - 1) // limit + 1) %}
@@ -40,7 +41,7 @@
                     <a class="page-link" href="{{ url_for('playlists', offset=i * limit) }}">{{ i + 1 }}</a>
                 </li>
             {% endfor %}
-            <li class="page-item {% if offset + limit >= total_playlists %}disabled{% endif %}">
+            <li class="page-item page-item-next {% if offset + limit >= total_playlists %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('playlists', offset=offset + limit) }}">Next</a>
             </li>
         </ul>
