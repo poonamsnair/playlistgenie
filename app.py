@@ -241,14 +241,17 @@ def create_playlist(playlist_id):
 @require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
+        spotify_token = session['spotify_token']
+        ratings = session['ratings']
+        spotify_username = session['spotify_username']
         request_id = str(uuid.uuid4())
-        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id)).start()
+        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username)).start()
         return render_template("recommendation_progress.html", request_id=request_id)
     else:
         return redirect(url_for("index"))
     
-def background_recommendation(playlist_id, rec_playlist_id, request_id):
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
+    sp = spotipy.Spotify(auth=spotify_token)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
 
@@ -266,10 +269,9 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
     audio_features = [feature for feature in audio_features if feature is not None]
 
     if len(audio_features) < 50:
-        return render_template('error.html', message="Not enough valid tracks for generating recommendations. Minimum is 50.")
+        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
     elif len(audio_features) > 100:
-        return render_template('error.html', message="Too many tracks for generating recommendations. Maximum is 100.")
-
+        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
     # Convert audio_features to a list of dictionaries
     playlist_data = []
     for feature in audio_features:
@@ -309,8 +311,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
         X_scaled = scaler.fit_transform(X)
         grid_search.fit(X_scaled, y)
     except Exception as e:
-        return render_template('error.html', message=f"Error during model training: {str(e)}")
-
+        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
         try:
@@ -318,16 +319,16 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
             for track in rec_tracks:
                 rec_track_ids.add(track['id'])
         except Exception as e:
-            return render_template('error.html', message=f"Error during recommendations generation: {str(e)}")
+            socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
 
     if not rec_track_ids:
-        return render_template('error.html', message="No recommendations were generated for this playlist.")
+        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
 
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
     for track_chunk in track_chunks:
         try:
-            sp.user_playlist_add_tracks(user=session['spotify_username'], playlist_id=rec_playlist_id, tracks=track_chunk)
+            sp.user_playlist_add_tracks(user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
             socketio.emit("recommendation_error", {"request_id": request_id, "message": f"Error adding tracks to playlist: {str(e)}"}, namespace='/recommendation')
