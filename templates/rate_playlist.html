@@ -100,22 +100,21 @@ function isMobile() {
            iframe.setAttribute('src', iframe.getAttribute('data-src'));
       }
     }
-      function loadVisibleIframes() {
-        const iframes = document.querySelectorAll('.spotify-player iframe');
-        iframes.forEach(iframe => {
-          const rect = iframe.getBoundingClientRect();
-          if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-            loadIframe(iframe);
-          }
-        });
-      }
+        function loadVisibleIframes() {
+          const iframes = !isMobile() ? document.querySelectorAll('.spotify-player iframe') : [];
+          iframes.forEach(iframe => {
+            const rect = iframe.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+              loadIframe(iframe);
+            }
+          });
+        }
 
        function handleScroll() {
          if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
             loadMoreTracks();
           }
-          if (!isMobile()) {
-            loadVisibleIframes();
+         loadVisibleIframes();
           }
         }
 
