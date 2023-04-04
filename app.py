@@ -335,5 +335,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
 def on_connect():
     pass
 
+
 if __name__ == "__main__":
     socketio.run(app)

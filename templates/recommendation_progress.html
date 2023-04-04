@@ -14,19 +14,36 @@
     var request_id = "{{ request_id }}";
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
 
+    socket.on('connect', function() {
+        console.log('Connected to the server.');
+    });
+
+    socket.on('connect_error', function(error) {
+        console.error('Error connecting to the server:', error);
+    });
 
     socket.on('recommendation_done', function(data) {
+        console.log('Received recommendation_done event:', data);
         if (data.request_id === request_id) {
             window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;
         }
     });
 
     socket.on('recommendation_error', function(data) {
+        console.error('Received recommendation_error event:', data);
         if (data.request_id === request_id) {
             var errorMessage = document.getElementById("error-message");
             errorMessage.innerHTML = "Error: " + data.message;
             errorMessage.style.display = "block";
         }
+    });
+
+    socket.on('disconnect', function() {
+        console.log('Disconnected from the server.');
+    });
+
+    socket.on('error', function(error) {
+        console.error('An error occurred on the socket connection:', error);
     });
 </script>
 {% endblock %}
