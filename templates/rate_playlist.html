@@ -4,7 +4,7 @@
   <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
   <p class="body-text">Please rate and listen to the following tracks:</p>
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}">
-    <div id="tracks-container"></div>
+    <div id="track-cards-container"></div>
     <br>
     <button type="submit" class="btn btn-playlist" style="margin-bottom: 20px;">Save Ratings</button>
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
@@ -47,34 +47,23 @@
           });
         });
       });
-    } // Add this closing bracket here
+    }
 
-    const tracksContainer = document.getElementById('tracks-container');
-    let start = 0;
-    const limit = 10;
-    const playlistId = '{{ playlist_id }}';
+    function fetchTracks(start, limit) {
+      const container = document.getElementById('track-cards-container');
+      const playlistId = "{{ playlist_id }}"; // Get the playlist ID from the template context
 
-    function fetchAndRenderTracks() {
       fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.text();
-        })
+        .then(response => response.text())
         .then(html => {
-          if (html) {
-            tracksContainer.innerHTML += html;
-            start += limit;
-            initializeStarRating();
-          }
+          container.innerHTML += html; // Add the fetched track cards to the container
         })
         .catch(error => {
-          console.error('Error fetching tracks:', error);
+          console.error('Failed to fetch track cards:', error);
         });
     }
 
-    // Initial fetch
-    fetchAndRenderTracks()
+    // Fetch the first set of track cards when the page loads
+    fetchTracks(0, 10); // You can adjust the start and limit values as needed
   </script>
 {% endblock %}
