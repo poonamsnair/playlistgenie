@@ -85,28 +85,28 @@
             crossorigin="anonymous"></script>
 
     <!-- Loader JavaScript -->
-    <script>
-      function showLoader() {
-        $('#loader').fadeIn('slow');
-      }
+<script>
+  function showLoader() {
+    $('#loader').fadeIn('slow');
+  }
 
-      function hideLoader() {
-        $('#loader').fadeOut('slow');
-      }
+  function hideLoader() {
+    $('#loader').fadeOut('slow');
+  }
 
-      $(window).on('load', function () {
-        hideLoader();
-      });
+  $(window).on('load', function () {
+    hideLoader();
+  });
 
-      $(document).on('click', 'a:not([href^="#"])', function () {
-      showLoader();
-      });
+  $(document).on('click', 'a:not([href^="#"])', function () {
+    showLoader();
+  });
 
-      $(document).on('submit', 'form', function () {
-      showLoader();
-      });
-      });
-    </script>
+  $(document).on('submit', 'form', function () {
+    showLoader();
+  });
+</script> 
+      
   </body>
 </html>
 
