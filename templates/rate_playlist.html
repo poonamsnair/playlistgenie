@@ -11,10 +11,6 @@
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
   </form>
   <script>
-      
-function isMobile() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
     const tracks = {{ tracks | tojson }};
     const tracksContainer = document.getElementById('tracks-container');
     let currentTrackIndex = 0;
@@ -56,37 +52,32 @@ function isMobile() {
       updateRating(defaultRating);
     }
 
-    function createTrackCard(track) {
-      const trackCard = document.createElement('div');
-      trackCard.className = 'rate-songs-card';
-      trackCard.innerHTML = `
-        <div class="card-body">
-          <h5 class="card-title">${track.track.name}</h5>
-          <p class="card-text">Artist: ${track.track.artists[0].name}</p>
-          <p class="card-text">Album: ${track.track.album.name}</p>
-          <div class="spotify-player"></div>
-          <div class="rating-stars">
-            ${[...Array(10)].map((_, i) => `
-              <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
-              <label for="rating-${i + 1}-${track.track.id}">${i + 1}</label>
-            `).join('')}
-          </div>
-        </div>
-      `;
-      if (!isMobile()) {
-        const spotifyPlayer = trackCard.querySelector('.spotify-player');
-        const iframe = document.createElement('iframe');
-        iframe.setAttribute('data-src', `https://open.spotify.com/embed/track/${track.track.id}`);
-        iframe.setAttribute('width', '300');
-        iframe.setAttribute('height', '80');
-        iframe.setAttribute('frameborder', '0');
-        iframe.setAttribute('allowtransparency', 'true');
-        iframe.setAttribute('allow', 'encrypted-media');
-        spotifyPlayer.appendChild(iframe);
-        initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
-      }
-      return trackCard;
-    }
+        function createTrackCard(track) {
+          const trackCard = document.createElement('div');
+          trackCard.className = 'rate-songs-card';
+          trackCard.innerHTML = `
+            <div class="card-body">
+              <h5 class="card-title">${track.track.name}</h5>
+              <p class="card-text">Artist: ${track.track.artists[0].name}</p>
+              <p class="card-text">Album: ${track.track.album.name}</p>
+              <div class="spotify-player">
+                ${
+                  isMobile()
+                    ? `<img src="${track.track.album.images[0].url}" alt="Album Art" width="300" height="300">`
+                    : `<iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>`
+                }
+              </div>
+              <div class="rating-stars">
+                ${[...Array(10)].map((_, i) => `
+                  <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
+                  <label for="rating-${i + 1}-${track.track.id}">${i + 1}</label>
+                `).join('')}
+              </div>
+            </div>
+          `;
+          initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
+          return trackCard;
+        }
 
 
       function loadMoreTracks() {
@@ -110,28 +101,22 @@ function isMobile() {
            iframe.setAttribute('src', iframe.getAttribute('data-src'));
       }
     }
-        function loadVisibleIframes() {
-          const iframes = document.querySelectorAll('.spotify-player iframe');
-          if (!isMobile()) {
-            iframes.forEach(iframe => {
-              const rect = iframe.getBoundingClientRect();
-              if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-                loadIframe(iframe);
-              }
-            });
-          } else {
-            iframes.forEach(iframe => {
-              iframe.closest('.rate-songs-card').classList.add('loaded');
-            });
+      function loadVisibleIframes() {
+        const iframes = document.querySelectorAll('.spotify-player iframe');
+        iframes.forEach(iframe => {
+          const rect = iframe.getBoundingClientRect();
+          if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+            loadIframe(iframe);
           }
-        }
+        });
+      }
 
-       function handleScroll() {
-         if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-            loadMoreTracks();
-          }
-         loadVisibleIframes();
+      function handleScroll() {
+        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
+          loadMoreTracks();
         }
+        loadVisibleIframes();
+      }
 
       window.addEventListener('scroll', handleScroll);
       loadMoreTracks();
