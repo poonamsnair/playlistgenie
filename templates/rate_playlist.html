@@ -110,12 +110,14 @@ function isMobile() {
         });
       }
 
-      function handleScroll() {
-        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-          loadMoreTracks();
+       function handleScroll() {
+         if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
+            loadMoreTracks();
+          }
+          if (!isMobile()) {
+            loadVisibleIframes();
+          }
         }
-        loadVisibleIframes();
-      }
 
       window.addEventListener('scroll', handleScroll);
       loadMoreTracks();
