@@ -18,67 +18,70 @@
 {% endblock %}
 {% block extra_js %}
   <script>
-  function initializeStarRating() {
-    const ratingStarsContainers = document.querySelectorAll('.rating-stars:not(.initialized)');
+    function initializeStarRating() {
+      const ratingStarsContainers = document.querySelectorAll('.rating-stars:not(.initialized)');
 
-    ratingStarsContainers.forEach(container => {
-      container.classList.add('initialized');
-      const ratingStars = container.querySelectorAll('input[type="radio"]');
-      const ratingLabels = container.querySelectorAll('label');
+      ratingStarsContainers.forEach(container => {
+        container.classList.add('initialized');
+        const ratingStars = container.querySelectorAll('input[type="radio"]');
+        const ratingLabels = container.querySelectorAll('label');
 
-      function updateRating(rating) {
-        for (let i = 0; i < ratingStars.length; i++) {
-          if (i < rating) {
-            ratingLabels[i].classList.add('green');
-          } else {
-            ratingLabels[i].classList.remove('green');
+        function updateRating(rating) {
+          for (let i = 0; i < ratingStars.length; i++) {
+            if (i < rating) {
+              ratingLabels[i].classList.add('green');
+            } else {
+              ratingLabels[i].classList.remove('green');
+            }
           }
         }
-      }
 
-      ratingStars.forEach((radio, index) => {
-        ratingLabels[index].addEventListener('mouseenter', () => {
-          updateRating(index + 1);
-        });
-        radio.addEventListener('click', () => {
-          updateRating(index + 1);
-        });
-        ratingLabels[index].addEventListener('mouseleave', () => {
-          const selectedRating = container.querySelector('input[type="radio"]:checked');
-          if (selectedRating) {
-            updateRating(parseInt(selectedRating.value));
-          } else {
-            updateRating(0);
-          }
-        });
-      });
-    });
-  }
-
-  function fetchTracks(start, limit) {
-    const container = document.getElementById('track-cards-container');
-    const playlistId = "{{ playlist_id }}"; // Get the playlist ID from the template context
-
-    fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
-      .then(response => response.text())
-      .then(html => {
-        container.innerHTML += html; // Add the fetched track cards to the container
-
-        // Set an event listener to show the card once the iframe has loaded
-        const iframes = container.querySelectorAll('.spotify-player');
-        iframes.forEach(iframe => {
-          iframe.addEventListener('load', () => {
-            const rateSongsCard = iframe.closest('.rate-songs-card');
-            rateSongsCard.style.display = 'block';
+        ratingStars.forEach((radio, index) => {
+          ratingLabels[index].addEventListener('mouseenter', () => {
+            updateRating(index + 1);
+          });
+          radio.addEventListener('click', () => {
+            updateRating(index + 1);
+          });
+          ratingLabels[index].addEventListener('mouseleave', () => {
+            const selectedRating = container.querySelector('input[type="radio"]:checked');
+            if (selectedRating) {
+              updateRating(parseInt(selectedRating.value));
+            } else {
+              updateRating(0);
+            }
           });
         });
-      })
-      .catch(error => {
-        console.error('Failed to fetch track cards:', error);
       });
-  }
+    }
 
-  // Initialize the star rating for the initial set of track cards
-  initializeStarRating();
-</script>
+    function fetchTracks(start, limit) {
+      const container = document.getElementById('track-cards-container');
+      const playlistId = "{{ playlist_id }}"; // Get the playlist ID from the template context
+
+      fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
+        .then(response => response.text())
+        .then(html => {
+          const tempContainer = document.createElement('div');
+          tempContainer.innerHTML = html;
+
+          const iframes = tempContainer.querySelectorAll('.spotify-player');
+          const totalIframes = iframes.length;
+          let loadedIframes = 0;
+
+          iframes.forEach(iframe => {
+            iframe.addEventListener('load', () => {
+              loadedIframes++;
+              if (loadedIframes === totalIframes) {
+                container.innerHTML += tempContainer.innerHTML;
+                initializeStarRating(); // Call the function after appending the new track cards
+              }
+            });
+          });
+        })
+        .catch(error => {
+          console.error('Failed to fetch track cards:', error);
+        });
+    }
+  </script>
 {% endblock %}
