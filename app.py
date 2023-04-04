@@ -197,7 +197,7 @@ def load_tracks(playlist_id, start, limit):
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
-            return render_template('track_card.html', tracks=tracks)
+            return render_template('track_card.html', tracks=tracks, start=start)  
         except Exception as e:
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
