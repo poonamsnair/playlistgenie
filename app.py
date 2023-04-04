@@ -217,8 +217,6 @@ def save_ratings(playlist_id):
         return redirect(url_for('index'))
     
     
-
-
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def create_playlist(playlist_id):
@@ -264,6 +262,9 @@ def recommendation(playlist_id, rec_playlist_id):
         return redirect(url_for("index"))
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
+    def emit_error_and_delete_playlist(request_id, message):
+        delete_playlist(spotify_token, rec_playlist_id)
+        socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth=spotify_token)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
@@ -279,9 +280,9 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
     audio_features = [feature for feature in audio_features if feature is not None]
 
     if len(audio_features) < 50:
-        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
+        emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
     elif len(audio_features) > 100:
-        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
+        emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
     # Convert audio_features to a list of dictionaries
     playlist_data = []
     for feature in audio_features:
@@ -321,7 +322,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
         X_scaled = scaler.fit_transform(X)
         grid_search.fit(X_scaled, y)
     except Exception as e:
-        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
+        emit_error_and_delete_playlist(request_id, "Error: Fit transformer error")
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
         try:
@@ -329,10 +330,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
             for track in rec_tracks:
                 rec_track_ids.add(track['id'])
         except Exception as e:
-            socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
+            emit_error_and_delete_playlist(request_id, "Error: Adding tracks to playlist")
 
     if not rec_track_ids:
-        socketio.emit("recommendation_error", {"request_id": request_id, "message": "Your error message here"}, namespace='/recommendation')
+        emit_error_and_delete_playlist(request_id, "Error: No tracks found to be added")
 
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
@@ -341,10 +342,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
             sp.user_playlist_add_tracks(user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
-            socketio.emit("recommendation_error", {"request_id": request_id, "message": f"Error adding tracks to playlist: {str(e)}"}, namespace='/recommendation')
+            emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
             return
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-
+    
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
     pass
