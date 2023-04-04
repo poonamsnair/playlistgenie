@@ -46,11 +46,6 @@
             }
           });
         });
-
-        // Set initial rating
-        const defaultRating = 5;
-        ratingStars[defaultRating - 1].checked = true;
-        updateRating(defaultRating);
       });
     }
 
@@ -59,30 +54,27 @@
     const limit = 10;
     const playlistId = '{{ playlist_id }}';
 
- function fetchAndRenderTracks() {
-  fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.text();
-    })
-    .then(html => {
-      if (html) {
-        tracksContainer.innerHTML += html;
-        start += limit;
-        initializeStarRating();
-      }
-    })
-    .catch(error => {
-      console.error('Error fetching tracks:', error);
-    });
-}
+    function fetchAndRenderTracks() {
+      fetch(`/rate_playlist/${playlistId}/${start}/${limit}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.text();
+        })
+        .then(html => {
+          if (html) {
+            tracksContainer.innerHTML += html;
+            start += limit;
+            initializeStarRating();
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching tracks:', error);
+        });
+    }
 
     // Initial fetch
-    fetchAndRenderTracks();
+    fetchAndRenderTracks()
   </script>
 {% endblock %}
-
-
- 
