@@ -5,7 +5,7 @@
       <p class="card-text">Artist: {{ track.track.artists[0].name }}</p>
       <p class="card-text">Album: {{ track.track.album.name }}</p>
       <div class="spotify-player">
-        <iframe src="https://open.spotify.com/embed/track/{{ track.track.id }}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+        <iframe class="spotify-player" src="https://open.spotify.com/embed/track/{track_id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media" onload="this.classList.add('loaded');"></iframe>
       </div>
       <div class="rating-stars">
         {% for i in range(1, 11) %}

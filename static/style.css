@@ -5,6 +5,14 @@ html, body {
   padding: 0;
 }
 
+  .spotify-player {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+  .spotify-player.loaded {
+    opacity: 1;
+  }
+
 .main-container {
     min-height: calc(100vh - 50px); /* 50px is the height of your footer */
 }
