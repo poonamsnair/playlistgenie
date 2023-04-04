@@ -13,6 +13,21 @@ html, body {
   margin-bottom: 30px;
 }
 
+    @media (max-width: 767px) {
+        .card-title {
+            font-size: 18px;
+        }
+        .playlist-card {
+            margin-bottom: 20px;
+        }
+    }
+
+    .card-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 250px; /* Adjust this value according to your design */
+    }
 
 body {
   margin: 0;

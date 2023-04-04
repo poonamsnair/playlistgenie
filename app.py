@@ -170,9 +170,10 @@ def playlists():
         session['spotify_user_id'] = sp.current_user()['id']
 
     playlist_id = request.args.get('playlist_id')
+    offset = request.args.get('offset', 0, type=int)
 
     if playlist_id is None:
-        playlists = sp.current_user_playlists()
+        playlists = sp.current_user_playlists(limit=10, offset=offset)
         unique_track_counts = {}
         for playlist in playlists['items']:
             tracks = sp.playlist_tracks(playlist['id'])['items']
