@@ -28,8 +28,13 @@
             <li class="page-item {% if offset == 0 %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('playlists', offset=previous_offset) }}">Back</a>
             </li>
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('playlists', offset=offset+10) }}">Next</a>
+            {% for i in range((total_playlists - 1) // limit + 1) %}
+                <li class="page-item {% if offset == i * limit %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('playlists', offset=i * limit) }}">{{ i + 1 }}</a>
+                </li>
+            {% endfor %}
+            <li class="page-item {% if offset + limit >= total_playlists %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('playlists', offset=offset + limit) }}">Next</a>
             </li>
         </ul>
     </nav>
