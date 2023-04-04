@@ -177,8 +177,9 @@ def playlists():
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
-        return render_template('rate_playlists.html', playlist=playlist, tracks=tracks)
-
+        unique_tracks = remove_duplicates(tracks)
+        unique_track_count = len(unique_tracks)
+        return render_template('rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
@@ -188,9 +189,6 @@ def rate_playlist(playlist_id):
             sp = spotipy.Spotify(auth=session['spotify_token'])
             playlist = sp.playlist(playlist_id)
             tracks = playlist['tracks']['items']
-
-            # Remove duplicate tracks
-            tracks = remove_duplicates(tracks)
 
             # Check if the user has already rated the tracks in this playlist
             if 'ratings' in session and playlist_id in session['ratings']:
