@@ -12,7 +12,7 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 <script>
     var request_id = "{{ request_id }}";
-    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
+    var socket = io.connect(location.protocol + '//' + document.domain + (location.port ? ':' + location.port : '') + '/recommendation');
 
     socket.on('connect', function() {
         console.log('Connected to the server.');

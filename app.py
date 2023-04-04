@@ -1,3 +1,4 @@
+import eventlet
 from flask import Flask, redirect, request, session, url_for, render_template
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
@@ -26,10 +27,12 @@ from functools import wraps
 import uuid
 from flask import jsonify
 
+eventlet.monkey_patch()
 app = Flask(__name__)
 app.secret_key = 'POO123'
 Bootstrap(app)
 socketio = SocketIO(app)
+
 
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private'
@@ -340,7 +343,7 @@ if __name__ == '__main__':
     env = os.environ.get('APP_ENV', 'test')
 
     if env == 'production':
-        socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        socketio.run(app, port=int(os.environ.get('PORT', 5000)))
     else:
         port = int(os.environ.get('PORT', 8888))
-        socketio.run(app, host='localhost', port=port)
+        socketio.run(app, port=port)
