@@ -28,6 +28,7 @@ import uuid
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
+from math import ceil
 
 
 eventlet.monkey_patch()
@@ -181,13 +182,15 @@ def playlists():
             unique_tracks = remove_duplicates(tracks)
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset)
+        num_pages = ceil(playlists['total'] / limit)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, num_pages=num_pages)
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
         unique_tracks = remove_duplicates(tracks)
         unique_track_count = len(unique_tracks)
         return render_template('rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
+
 
 
 
