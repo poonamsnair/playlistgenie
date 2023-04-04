@@ -75,9 +75,12 @@ function isMobile() {
           </div>
         </div>
       `;
+      if (!isMobile()) {
         initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
-        return trackCard;
       }
+      return trackCard;
+    }
+
 
       function loadMoreTracks() {
         const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);

@@ -28,6 +28,8 @@ import uuid
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from spotipy.exceptions import SpotifyException
 
 
 eventlet.monkey_patch()
@@ -192,28 +194,33 @@ def playlists():
 
 
 
+# Add a decorator to handle rate limits
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+       retry=retry_if_exception_type(SpotifyException))
+def get_playlist_tracks(spotify_client, playlist_id):
+    playlist = spotify_client.playlist(playlist_id)
+    tracks = playlist['tracks']['items']
+    return tracks
+
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def rate_playlist(playlist_id):
     if session.get('spotify_token'):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
-            playlist = sp.playlist(playlist_id)
-            tracks = playlist['tracks']['items']
-            unique_tracks = remove_duplicates(tracks)  # Add this line to remove duplicates
 
-            # Check if the user has already rated the tracks in this playlist
+            tracks = get_playlist_tracks(sp, playlist_id)
+            unique_tracks = remove_duplicates(tracks)
+
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
 
-            # Retrieve the track information and generate the Spotify URIs
-            for track in unique_tracks:  # Replace 'tracks' with 'unique_tracks'
+            for track in unique_tracks:
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
-            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)  # Replace 'tracks' with 'unique_tracks'
-        except Exception as e:  # Catch the exception as 'e'
-            # Include the exception details in the error message
+            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)
+        except Exception as e:
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
         return redirect(url_for('index'))
