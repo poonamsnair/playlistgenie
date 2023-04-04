@@ -4,7 +4,11 @@
   <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
   <p class="body-text">Please rate and listen to the following tracks:</p>
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}">
-    <div id="track-cards-container"></div>
+    <div id="track-cards-container">
+      {% for track in tracks %}
+        {% include 'track_card.html' with track=track start=loop.index0 %}  <!-- Include the track_card.html template for each initial track -->
+      {% endfor %}
+    </div>
     <br>
     <button type="submit" class="btn btn-playlist" style="margin-bottom: 20px;">Save Ratings</button>
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
@@ -12,58 +16,57 @@
 {% endblock %}
 {% block extra_js %}
   <script>
-    function initializeStarRating() {
-      const ratingStarsContainers = document.querySelectorAll('.rating-stars:not(.initialized)');
+  function initializeStarRating() {
+    const ratingStarsContainers = document.querySelectorAll('.rating-stars:not(.initialized)');
 
-      ratingStarsContainers.forEach(container => {
-        container.classList.add('initialized');
-        const ratingStars = container.querySelectorAll('input[type="radio"]');
-        const ratingLabels = container.querySelectorAll('label');
+    ratingStarsContainers.forEach(container => {
+      container.classList.add('initialized');
+      const ratingStars = container.querySelectorAll('input[type="radio"]');
+      const ratingLabels = container.querySelectorAll('label');
 
-        function updateRating(rating) {
-          for (let i = 0; i < ratingStars.length; i++) {
-            if (i < rating) {
-              ratingLabels[i].classList.add('green');
-            } else {
-              ratingLabels[i].classList.remove('green');
-            }
+      function updateRating(rating) {
+        for (let i = 0; i < ratingStars.length; i++) {
+          if (i < rating) {
+            ratingLabels[i].classList.add('green');
+          } else {
+            ratingLabels[i].classList.remove('green');
           }
         }
+      }
 
-        ratingStars.forEach((radio, index) => {
-          ratingLabels[index].addEventListener('mouseenter', () => {
-            updateRating(index + 1);
-          });
-          radio.addEventListener('click', () => {
-            updateRating(index + 1);
-          });
-          ratingLabels[index].addEventListener('mouseleave', () => {
-            const selectedRating = container.querySelector('input[type="radio"]:checked');
-            if (selectedRating) {
-              updateRating(parseInt(selectedRating.value));
-            } else {
-              updateRating(0);
-            }
-          });
+      ratingStars.forEach((radio, index) => {
+        ratingLabels[index].addEventListener('mouseenter', () => {
+          updateRating(index + 1);
+        });
+        radio.addEventListener('click', () => {
+          updateRating(index + 1);
+        });
+        ratingLabels[index].addEventListener('mouseleave', () => {
+          const selectedRating = container.querySelector('input[type="radio"]:checked');
+          if (selectedRating) {
+            updateRating(parseInt(selectedRating.value));
+          } else {
+            updateRating(0);
+          }
         });
       });
-    }
+    });
+  }
 
-    function fetchTracks(start, limit) {
-      const container = document.getElementById('track-cards-container');
-      const playlistId = "{{ playlist_id }}"; // Get the playlist ID from the template context
+  function fetchTracks(start, limit) {
+    const container = document.getElementById('track-cards-container');
+    const playlistId = "{{ playlist_id }}"; // Get the playlist ID from the template context
 
-      fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
-        .then(response => response.text())
-        .then(html => {
-          container.innerHTML += html; // Add the fetched track cards to the container
-        })
-        .catch(error => {
-          console.error('Failed to fetch track cards:', error);
-        });
-    }
-
-    // Fetch the first set of track cards when the page loads
-    fetchTracks(0, 10); // You can adjust the start and limit values as needed
-  </script>
+    fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
+      .then(response => response.text())
+      .then(html => {
+        container.innerHTML += html; // Add the fetched track cards to the container
+      })
+      .catch(error => {
+        console.error('Failed to fetch track cards:', error);
+      });
+  }
+  // Initialize the star rating for the initial set of track cards
+  initializeStarRating();
+</script>
 {% endblock %}
