@@ -5,6 +5,7 @@ pandas
 scikit-learn
 Werkzeug
 Stripe
-Gunicorn
 flask_socketio
-eventlet==<latest-version>
+greenlet
+eventlet
+gunicorn[eventlet]
