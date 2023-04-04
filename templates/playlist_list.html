@@ -12,7 +12,7 @@
                         <h5 class="card-title" title="{{ playlist['name'] }}">{{ playlist['name'] }}</h5>
                         <p>Unique tracks: {{ unique_track_count }}</p>
                         {% if unique_track_count >= 5 and unique_track_count <= 100 %}
-                            <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-playlist" data-bs-toggle="tooltip" data-bs-placement="top" title="Rate this playlist">Rate Playlist</a>
+                            <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-playlist" data-bs-toggle="tooltip" data-bs-placement="top" title="Rate Playlist">Rate Playlist</a>
                         {% elif unique_track_count < 5 %}
                             <button class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="This playlist has less than 5 unique tracks" disabled>Rate Playlist</button>
                         {% else %}
@@ -40,10 +40,11 @@
     </nav>
 </div>
 
-<!-- Add this script to enable Bootstrap tooltips -->
+<!-- Enable Bootstrap tooltips -->
 <script>
-  $(function () {
-    $('[data-bs-toggle="tooltip"]').tooltip()
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
   })
 </script>
 {% endblock %}
