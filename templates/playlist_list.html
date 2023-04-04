@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+@media (max-width: 767px) {
+  .pagination .page-item:not(.page-item-back):not(.page-item-next) {
+    display: none;
+  }
+}
+</style>
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
