@@ -7,4 +7,4 @@ Werkzeug
 Stripe
 Gunicorn
 flask_socketio
-eventlet==0.30.2
+eventlet==<latest-version>
