@@ -27,6 +27,7 @@ from functools import wraps
 import uuid
 from flask import jsonify
 from flask import request, abort
+from collections import OrderedDict
 
 
 eventlet.monkey_patch()
@@ -66,6 +67,14 @@ def timeout(seconds=30, error_message='Function call timed out'):
         return wraps(func)(wrapper)
 
     return decorator
+
+def remove_duplicates(tracks):
+    unique_tracks = OrderedDict()
+    for track in tracks:
+        track_id = track['track']['id']
+        if track_id not in unique_tracks:
+            unique_tracks[track_id] = track
+    return list(unique_tracks.values())
 
 def delete_playlist(spotify_token, playlist_id):
     sp = spotipy.Spotify(auth=spotify_token)
@@ -179,6 +188,9 @@ def rate_playlist(playlist_id):
             sp = spotipy.Spotify(auth=session['spotify_token'])
             playlist = sp.playlist(playlist_id)
             tracks = playlist['tracks']['items']
+
+            # Remove duplicate tracks
+            tracks = remove_duplicates(tracks)
 
             # Check if the user has already rated the tracks in this playlist
             if 'ratings' in session and playlist_id in session['ratings']:
