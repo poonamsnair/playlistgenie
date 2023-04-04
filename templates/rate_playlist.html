@@ -1,6 +1,13 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+@media (max-width: 767px) {
+  .spotify-player {
+    display: none;
+  }
+}
+</style>
  <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
   <p class="body-text">Please rate and listen to the following tracks:</p>
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}">
