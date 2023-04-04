@@ -182,7 +182,7 @@ def playlists():
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total'] 
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit)
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
