@@ -59,17 +59,25 @@
     const limit = 10;
     const playlistId = '{{ playlist_id }}';
 
-    function fetchAndRenderTracks() {
-      fetch(`/rate_playlist/${playlistId}/${start}/${limit}`)
-        .then(response => response.text())
-        .then(html => {
-          if (html) {
-            tracksContainer.innerHTML += html;
-            start += limit;
-            initializeStarRating();
-          }
-        })
-    }
+ function fetchAndRenderTracks() {
+  fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.text();
+    })
+    .then(html => {
+      if (html) {
+        tracksContainer.innerHTML += html;
+        start += limit;
+        initializeStarRating();
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching tracks:', error);
+    });
+}
 
     // Initial fetch
     fetchAndRenderTracks();
