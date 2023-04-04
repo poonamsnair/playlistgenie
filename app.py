@@ -171,7 +171,7 @@ def playlists():
         return render_template('rate_playlists.html', playlist=playlist, tracks=tracks)
 
 
-@app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
+@app.route('/rate_playlist/<playlist_id>', methods=['GET', 'POST'])
 @require_spotify_token
 def rate_playlist(playlist_id):
     if session.get('spotify_token'):

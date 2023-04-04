@@ -55,7 +55,7 @@
     const playlistId = '{{ playlist_id }}';
 
     function fetchAndRenderTracks() {
-      fetch(`/rate_playlist/${playlistId}/${start}/${limit}`)
+      fetch(`/rate_playlist/${playlistId}/${start}/${limit}/`)
         .then(response => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
