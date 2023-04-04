@@ -173,13 +173,19 @@ def playlists():
 
     if playlist_id is None:
         playlists = sp.current_user_playlists()
-        return render_template('playlist_list.html', playlists=playlists)
+        unique_track_counts = {}
+        for playlist in playlists['items']:
+            tracks = sp.playlist_tracks(playlist['id'])['items']
+            unique_tracks = remove_duplicates(tracks)
+            unique_track_counts[playlist['id']] = len(unique_tracks)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts)
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
         unique_tracks = remove_duplicates(tracks)
         unique_track_count = len(unique_tracks)
         return render_template('rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
+
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
@@ -189,17 +195,18 @@ def rate_playlist(playlist_id):
             sp = spotipy.Spotify(auth=session['spotify_token'])
             playlist = sp.playlist(playlist_id)
             tracks = playlist['tracks']['items']
+            unique_tracks = remove_duplicates(tracks)  # Add this line to remove duplicates
 
             # Check if the user has already rated the tracks in this playlist
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
 
             # Retrieve the track information and generate the Spotify URIs
-            for track in tracks:
+            for track in unique_tracks:  # Replace 'tracks' with 'unique_tracks'
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
-            return render_template('rate_playlist.html', tracks=tracks, playlist_id=playlist_id)
+            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)  # Replace 'tracks' with 'unique_tracks'
         except Exception as e:  # Catch the exception as 'e'
             # Include the exception details in the error message
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
