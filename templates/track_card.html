@@ -9,7 +9,7 @@
       </div>
       <div class="rating-stars">
         {% for i in range(1, 11) %}
-          <input type="radio" id="rating-{{ i }}-{{ track.track.id }}" name="rating-{{ loop.index0 + start_index }}" value="{{ i }}" {% if i == 5 %}checked{% endif %}>
+          <input type="radio" id="rating-{{ i }}-{{ track.track.id }}" name="rating-{{ loop.index0 + start }}" value="{{ i }}" {% if i == 5 %}checked{% endif %}>
           <label for="rating-{{ i }}-{{ track.track.id }}">{{ i }}</label>
         {% endfor %}
       </div>

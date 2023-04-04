@@ -193,7 +193,6 @@ def load_tracks(playlist_id, start, limit):
             playlist = sp.playlist(playlist_id)
             tracks = playlist['tracks']['items'][start:start + limit]
 
-            # Retrieve the track information and generate the Spotify URIs
             for track in tracks:
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
