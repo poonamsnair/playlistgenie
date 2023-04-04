@@ -71,31 +71,49 @@
           </div>
         </div>
       `;
-      initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
-      return trackCard;
-    }
-
-    function loadMoreTracks() {
-      const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
-      tracksToLoad.forEach(track => {
-        const trackCard = createTrackCard(track);
-        tracksContainer.appendChild(trackCard);
-      });
-      currentTrackIndex += 10;
-    }
-
-    function isScrolledNearBottom() {
-      return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
-    }
-
-    function handleScroll() {
-      if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-        loadMoreTracks();
+        initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
+        return trackCard;
       }
-    }
 
-    window.addEventListener('scroll', handleScroll);
-    loadMoreTracks();
+      function loadMoreTracks() {
+        const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
+        tracksToLoad.forEach(track => {
+          const trackCard = createTrackCard(track);
+          tracksContainer.appendChild(trackCard);
+        });
+        currentTrackIndex += 10;
+      }
 
-  </script>
-{% endblock %}
+      function isScrolledNearBottom() {
+        return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
+      }
+
+      function loadIframe(iframe) {
+        if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
+          iframe.setAttribute('src', iframe.getAttribute('data-src'));
+        }
+      }
+
+      function loadVisibleIframes() {
+        const iframes = document.querySelectorAll('.spotify-player iframe');
+        iframes.forEach(iframe => {
+          const rect = iframe.getBoundingClientRect();
+          if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+            loadIframe(iframe);
+          }
+        });
+      }
+
+      function handleScroll() {
+        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
+          loadMoreTracks();
+        }
+        loadVisibleIframes();
+      }
+
+      window.addEventListener('scroll', handleScroll);
+      loadMoreTracks();
+      loadVisibleIframes();
+
+    </script>
+    {% endblock %}
