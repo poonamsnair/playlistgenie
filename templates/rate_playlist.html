@@ -6,7 +6,9 @@
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}">
     <div id="track-cards-container">
       {% for track in tracks %}
-        {% include 'track_card.html' with track=track start=loop.index0 %}
+        {% with track=track, start=loop.index0 %}
+          {% include 'track_card.html' %}
+        {% endwith %}
       {% endfor %}
     </div>
     <br>
