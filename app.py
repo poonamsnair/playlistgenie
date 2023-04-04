@@ -26,6 +26,8 @@ import threading
 from functools import wraps
 import uuid
 from flask import jsonify
+from flask import request, abort
+
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -64,6 +66,11 @@ def timeout(seconds=30, error_message='Function call timed out'):
         return wraps(func)(wrapper)
 
     return decorator
+
+def delete_playlist(playlist_id):
+    sp = spotipy.Spotify(auth=session['spotify_token'])
+    user_id = sp.me()['id']
+    sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def inject_stripe_keys():
     if os.environ.get('APP_ENV', 'test') == 'production':
@@ -211,6 +218,7 @@ def save_ratings(playlist_id):
     
     
 
+
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def create_playlist(playlist_id):
@@ -233,6 +241,11 @@ def create_playlist(playlist_id):
         session['rec_playlist_id'] = rec_playlist_id
 
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
+
+    # If the request is a GET and there's a rec_playlist_id in the session, delete the playlist and remove rec_playlist_id from the session
+    if request.method == 'GET' and 'rec_playlist_id' in session:
+        delete_playlist(session['rec_playlist_id'])
+        session.pop('rec_playlist_id', None)
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
