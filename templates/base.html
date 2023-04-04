@@ -8,7 +8,8 @@
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700,800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
       
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
       
@@ -80,30 +81,33 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0v8FqFjcJ6pajs/rfdfs3SO+kD4Ck5BdPtF+to8xM6CU5v2" crossorigin="anonymous"></script>
-
-    <!-- Loader JavaScript -->
-<script>
-  function showLoader() {
-    $('#loader').fadeIn('slow');
-  }
-
-  function hideLoader() {
-    $('#loader').fadeOut('slow');
-  }
-
-  $(window).on('load', function () {
-    hideLoader();
-  });
-
-  $(document).on('click', 'a:not([href^="#"])', function () {
-    showLoader();
-  });
-
-  $(document).on('submit', 'form', function () {
-    showLoader();
-  });
-</script> 
       
-  </body>
-</html>
+    <!-- Then, add your custom script -->
+    <script>
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
 
+        function showLoader() {
+            $('#loader').fadeIn('slow');
+        }
+
+        function hideLoader() {
+            $('#loader').fadeOut('slow');
+        }
+
+        $(window).on('load', function () {
+            hideLoader();
+        });
+
+        $(document).on('click', 'a:not([href^="#"])', function () {
+            showLoader();
+        });
+
+        $(document).on('submit', 'form', function () {
+            showLoader();
+        });
+    </script>
+</body>
+</html>
