@@ -101,13 +101,19 @@ function isMobile() {
       }
     }
         function loadVisibleIframes() {
-          const iframes = !isMobile() ? document.querySelectorAll('.spotify-player iframe') : [];
-          iframes.forEach(iframe => {
-            const rect = iframe.getBoundingClientRect();
-            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-              loadIframe(iframe);
-            }
-          });
+          const iframes = document.querySelectorAll('.spotify-player iframe');
+          if (!isMobile()) {
+            iframes.forEach(iframe => {
+              const rect = iframe.getBoundingClientRect();
+              if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+                loadIframe(iframe);
+              }
+            });
+          } else {
+            iframes.forEach(iframe => {
+              iframe.closest('.rate-songs-card').classList.add('loaded');
+            });
+          }
         }
 
        function handleScroll() {
