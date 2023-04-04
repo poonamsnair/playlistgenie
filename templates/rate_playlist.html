@@ -63,11 +63,21 @@
       .then(response => response.text())
       .then(html => {
         container.innerHTML += html; // Add the fetched track cards to the container
+
+        // Set an event listener to show the card once the iframe has loaded
+        const iframes = container.querySelectorAll('.spotify-player');
+        iframes.forEach(iframe => {
+          iframe.addEventListener('load', () => {
+            const rateSongsCard = iframe.closest('.rate-songs-card');
+            rateSongsCard.style.display = 'block';
+          });
+        });
       })
       .catch(error => {
         console.error('Failed to fetch track cards:', error);
       });
   }
+
   // Initialize the star rating for the initial set of track cards
   initializeStarRating();
 </script>
