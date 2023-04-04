@@ -67,8 +67,8 @@ def timeout(seconds=30, error_message='Function call timed out'):
 
     return decorator
 
-def delete_playlist(playlist_id):
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+def delete_playlist(spotify_token, playlist_id):
+    sp = spotipy.Spotify(auth=spotify_token)
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
@@ -244,7 +244,7 @@ def create_playlist(playlist_id):
 
     # If the request is a GET and there's a rec_playlist_id in the session, delete the playlist and remove rec_playlist_id from the session
     if request.method == 'GET' and 'rec_playlist_id' in session:
-        delete_playlist(session['rec_playlist_id'])
+        delete_playlist(session['spotify_token'], session['rec_playlist_id'])
         session.pop('rec_playlist_id', None)
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
