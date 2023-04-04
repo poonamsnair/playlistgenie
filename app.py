@@ -31,7 +31,7 @@ from flask import request, abort
 
 eventlet.monkey_patch()
 app = Flask(__name__)
-app.secret_key = 'POO123'
+app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 
@@ -175,26 +175,35 @@ def playlists():
 @require_spotify_token
 def rate_playlist(playlist_id):
     if session.get('spotify_token'):
+        # Check if the user has already rated the tracks in this playlist
+        if 'ratings' in session and playlist_id in session['ratings']:
+            return redirect(url_for('recommendation', playlist_id=playlist_id))
+
+        return render_template('rate_playlist.html', playlist_id=playlist_id)
+    else:
+        return redirect(url_for('index'))
+
+
+@app.route('/rate_playlist/<playlist_id>/<int:start>/<int:limit>/', methods=['GET'])
+@require_spotify_token
+def load_tracks(playlist_id, start, limit):
+    if session.get('spotify_token'):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
             playlist = sp.playlist(playlist_id)
-            tracks = playlist['tracks']['items']
-
-            # Check if the user has already rated the tracks in this playlist
-            if 'ratings' in session and playlist_id in session['ratings']:
-                return redirect(url_for('recommendation', playlist_id=playlist_id))
+            tracks = playlist['tracks']['items'][start:start + limit]
 
             # Retrieve the track information and generate the Spotify URIs
             for track in tracks:
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
-            return render_template('rate_playlist.html', tracks=tracks, playlist_id=playlist_id)
-        except Exception as e:  # Catch the exception as 'e'
-            # Include the exception details in the error message
+            return render_template('track_card.html', tracks=tracks)
+        except Exception as e:
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
         return redirect(url_for('index'))
+
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])

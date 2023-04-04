@@ -1,76 +1,79 @@
 {% extends 'base.html' %}
 
 {% block content %}
- <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
+  <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
   <p class="body-text">Please rate and listen to the following tracks:</p>
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}">
-    {% for track in tracks %}
-      <div class="rate-songs-card">
-        <div class="card-body">
-          <h5 class="card-title">{{ track.track.name }}</h5>
-          <p class="card-text">Artist: {{ track.track.artists[0].name }}</p>
-          <p class="card-text">Album: {{ track.track.album.name }}</p>
-          <div class="spotify-player">
-            <iframe src="https://open.spotify.com/embed/track/{{ track.track.id }}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
-          </div>
-          <div class="rating-stars">
-            {% for i in range(1, 11) %}
-              <input type="radio" id="rating-{{ i }}-{{ track.track.id }}" name="rating-{{ track.track.id }}" value="{{ i }}" {% if i == 5 %}checked{% endif %}>
-              <label for="rating-{{ i }}-{{ track.track.id }}">{{ i }}</label>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      <br>
-      {% endfor %}
+    <div id="tracks-container"></div>
     <br>
     <button type="submit" class="btn btn-playlist" style="margin-bottom: 20px;">Save Ratings</button>
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
   </form>
+{% endblock %}
+{% block extra_js %}
+  <script>
+    function initializeStarRating() {
+      const ratingStarsContainers = document.querySelectorAll('.rating-stars:not(.initialized)');
 
- <script>
-const ratingStarsContainers = document.querySelectorAll('.rating-stars');
+      ratingStarsContainers.forEach(container => {
+        container.classList.add('initialized');
+        const ratingStars = container.querySelectorAll('input[type="radio"]');
+        const ratingLabels = container.querySelectorAll('label');
 
-ratingStarsContainers.forEach(container => {
-  const ratingStars = container.querySelectorAll('input[type="radio"]');
-  const ratingLabels = container.querySelectorAll('label');
+        function updateRating(rating) {
+          for (let i = 0; i < ratingStars.length; i++) {
+            if (i < rating) {
+              ratingLabels[i].classList.add('green');
+            } else {
+              ratingLabels[i].classList.remove('green');
+            }
+          }
+        }
 
-  function updateRating(rating) {
-    for (let i = 0; i < ratingStars.length; i++) {
-      if (i < rating) {
-        ratingLabels[i].classList.add('green');
-      } else {
-        ratingLabels[i].classList.remove('green');
-      }
+        ratingStars.forEach((radio, index) => {
+          ratingLabels[index].addEventListener('mouseenter', () => {
+            updateRating(index + 1);
+          });
+          radio.addEventListener('click', () => {
+            updateRating(index + 1);
+          });
+          ratingLabels[index].addEventListener('mouseleave', () => {
+            const selectedRating = container.querySelector('input[type="radio"]:checked');
+            if (selectedRating) {
+              updateRating(parseInt(selectedRating.value));
+            } else {
+              updateRating(0);
+            }
+          });
+        });
+
+        // Set initial rating
+        const defaultRating = 5;
+        ratingStars[defaultRating - 1].checked = true;
+        updateRating(defaultRating);
+      });
     }
-  }
 
-  ratingStars.forEach((radio, index) => {
-    ratingLabels[index].addEventListener('mouseenter', () => {
-      updateRating(index + 1);
-    });
-    radio.addEventListener('click', () => {
-      updateRating(index + 1);
-    });
-    ratingLabels[index].addEventListener('mouseleave', () => {
-      const selectedRating = container.querySelector('input[type="radio"]:checked');
-      if (selectedRating) {
-        updateRating(parseInt(selectedRating.value));
-      } else {
-        updateRating(0);
-      }
-    });
-  });
+    const tracksContainer = document.getElementById('tracks-container');
+    let start = 0;
+    const limit = 10;
+    const playlistId = '{{ playlist_id }}';
 
-  // Set initial rating
-  const defaultRating = 5;
-  ratingStars[defaultRating - 1].checked = true;
-  updateRating(defaultRating);
-});
+    function fetchAndRenderTracks() {
+      fetch(`/rate_playlist/${playlistId}/${start}/${limit}`)
+        .then(response => response.text())
+        .then(html => {
+          if (html) {
+            tracksContainer.innerHTML += html;
+            start += limit;
+            initializeStarRating();
+          }
+        })
+    }
 
-
-</script>
-
+    // Initial fetch
+    fetchAndRenderTracks();
+  </script>
 {% endblock %}
 
 
