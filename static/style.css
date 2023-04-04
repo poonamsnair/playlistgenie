@@ -13,21 +13,6 @@ html, body {
   margin-bottom: 30px;
 }
 
-    @media (max-width: 767px) {
-        .card-title {
-            font-size: 18px;
-        }
-        .playlist-card {
-            margin-bottom: 20px;
-        }
-    }
-
-    .card-title {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        max-width: 250px; /* Adjust this value according to your design */
-    }
 
 body {
   margin: 0;
@@ -45,6 +30,30 @@ body {
 .container {
   margin: 0 auto;
   padding: 0;
+}
+
+/*mobile css*/
+
+    @media (max-width: 767px) {
+        .card-title {
+            font-size: 18px;
+        }
+        .playlist-card {
+            margin-bottom: 20px;
+        }
+    }
+
+    .card-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 250px; /* Adjust this value according to your design */
+    }
+
+@media (max-width: 767px) {
+  .spotify-player {
+    display: none;
+  }
 }
 
 /* Wrapper classes for the container and footer */
@@ -376,39 +385,25 @@ footer {
   color: #fff;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  transition: box-shadow 0.3s ease-in-out;
+  transition: box-shadow 0.3s ease-in-out, opacity 0.5s ease-in-out;
   margin-bottom: 20px;
+  opacity: 0;
 }
 
 .rate-songs-card:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
+.rate-songs-card.loaded {
+  opacity: 1;
+}
+
 .rate-playlist-container {
   max-width: 800px;
   margin: 40px auto;
   padding: 20px;
-  background-color: transparent; /* Make the container background transparent */
-  color: #fff; /* Set container text color to white */
-}
-
-.song-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  background: linear-gradient(135deg, #121212 0%, #323232 100%); /* Set card background to gradient */
-  border-radius: 10px;
-  margin-bottom: 20px;
-  color: #fff; /* Set card text color to white */
-}
-
-.song-card h5 {
-  margin: 0;
-}
-
-.song-card p {
-  margin: 0;
+  background-color: transparent;
+  color: #fff;
 }
 
 .rating-stars {
@@ -439,9 +434,8 @@ footer {
 .rate-playlist-submit {
   text-align: center;
   padding-bottom: 30px !important;
-      margin-bottom: 40px !important;
+  margin-bottom: 40px !important;
 }
-
 
 
 /* Create Playlist page specific styles */

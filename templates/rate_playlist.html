@@ -89,11 +89,13 @@
       }
 
       function loadIframe(iframe) {
-        if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
-          iframe.setAttribute('src', iframe.getAttribute('data-src'));
-        }
+         if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
+           iframe.onload = function() {
+             iframe.closest('.rate-songs-card').classList.add('loaded');
+        };
+           iframe.setAttribute('src', iframe.getAttribute('data-src'));
       }
-
+    }
       function loadVisibleIframes() {
         const iframes = document.querySelectorAll('.spotify-player iframe');
         iframes.forEach(iframe => {
