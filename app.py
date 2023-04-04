@@ -165,27 +165,30 @@ def callback():
 @require_spotify_token
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
+    limit = 10
 
     if not session.get('spotify_user_id'):
         session['spotify_user_id'] = sp.current_user()['id']
 
     playlist_id = request.args.get('playlist_id')
-    offset = request.args.get('offset', 0, type=int)
+    offset = int(request.args.get('offset', 0))
 
     if playlist_id is None:
-        playlists = sp.current_user_playlists(limit=10, offset=offset)
+        playlists = sp.current_user_playlists(limit=limit, offset=offset)
         unique_track_counts = {}
         for playlist in playlists['items']:
             tracks = sp.playlist_tracks(playlist['id'])['items']
             unique_tracks = remove_duplicates(tracks)
             unique_track_counts[playlist['id']] = len(unique_tracks)
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts)
+        previous_offset = max(offset - limit, 0)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset)
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
         unique_tracks = remove_duplicates(tracks)
         unique_track_count = len(unique_tracks)
         return render_template('rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
+
 
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
