@@ -11,6 +11,11 @@
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
   </form>
   <script>
+      
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     const tracks = {{ tracks | tojson }};
     const tracksContainer = document.getElementById('tracks-container');
     let currentTrackIndex = 0;
