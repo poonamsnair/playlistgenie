@@ -14,6 +14,7 @@
     var request_id = "{{ request_id }}";
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/recommendation');
 
+
     socket.on('recommendation_done', function(data) {
         if (data.request_id === request_id) {
             window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;

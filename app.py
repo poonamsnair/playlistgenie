@@ -335,11 +335,5 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id):
 def on_connect():
     pass
 
-if __name__ == '__main__':
-    env = os.environ.get('APP_ENV', 'test')
-
-    if env == 'production':
-        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-    else:
-        port = int(os.environ.get('PORT', 8888))
-        app.run(host='localhost', port=port)
+if __name__ == "__main__":
+    socketio.run(app)
