@@ -336,5 +336,11 @@ def on_connect():
     pass
 
 
-if __name__ == "__main__":
-    socketio.run(app)
+if __name__ == '__main__':
+    env = os.environ.get('APP_ENV', 'test')
+
+    if env == 'production':
+        socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    else:
+        port = int(os.environ.get('PORT', 8888))
+        socketio.run(app, host='localhost', port=port)
