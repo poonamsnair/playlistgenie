@@ -254,9 +254,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
     sp = spotipy.Spotify(auth=spotify_token)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
-
-    ratings = session['ratings']
-
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
