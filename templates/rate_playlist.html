@@ -64,9 +64,7 @@ function isMobile() {
           <h5 class="card-title">${track.track.name}</h5>
           <p class="card-text">Artist: ${track.track.artists[0].name}</p>
           <p class="card-text">Album: ${track.track.album.name}</p>
-          <div class="spotify-player">
-            ${!isMobile() ? `<iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>` : ''}
-          </div>
+          <<div class="spotify-player"></div>
           <div class="rating-stars">
             ${[...Array(10)].map((_, i) => `
               <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
@@ -76,6 +74,15 @@ function isMobile() {
         </div>
       `;
       if (!isMobile()) {
+        const spotifyPlayer = trackCard.querySelector('.spotify-player');
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('data-src', `https://open.spotify.com/embed/track/${track.track.id}`);
+        iframe.setAttribute('width', '300');
+        iframe.setAttribute('height', '80');
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allowtransparency', 'true');
+        iframe.setAttribute('allow', 'encrypted-media');
+        spotifyPlayer.appendChild(iframe);
         initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
       }
       return trackCard;
