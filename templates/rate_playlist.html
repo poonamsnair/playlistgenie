@@ -64,7 +64,7 @@ function isMobile() {
           <h5 class="card-title">${track.track.name}</h5>
           <p class="card-text">Artist: ${track.track.artists[0].name}</p>
           <p class="card-text">Album: ${track.track.album.name}</p>
-          <<div class="spotify-player"></div>
+          <div class="spotify-player"></div>
           <div class="rating-stars">
             ${[...Array(10)].map((_, i) => `
               <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
