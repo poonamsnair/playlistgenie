@@ -187,7 +187,11 @@ def logout():
 def callback():
     try:
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        token_info = auth_manager.get_access_token(request.args.get('code'), state=request.args.get('state'))
+        state = request.args.get('state')
+        if state != session.get('auth_state'):
+            raise Exception('Authorization state mismatch')
+        
+        token_info = auth_manager.get_access_token(request.args.get('code'))
 
         session.clear()
         session['spotify_token_info'] = token_info
@@ -203,6 +207,7 @@ def callback():
     except Exception as e:
         print(f"Error in /callback: {e}")
         return redirect(url_for('index'))
+
 
 
 
