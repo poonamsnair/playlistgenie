@@ -21,9 +21,10 @@
   </head>
   <body class="{% block body_class %}{% endblock %}">
       
-    {% if request.path != url_for('index') and request.path != url_for('playlists') %}
-      {% include 'loader.html' with show_loader=show_loader %}
-    {% endif %}
+{% if request.path != url_for('index') and request.path != url_for('playlists') %}
+  {% include 'loader.html' %}
+{% endif %}
+
     
 {% if not request.path == url_for('index') %}
       <nav class="navbar navbar-expand-lg navbar-dark">

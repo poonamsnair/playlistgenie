@@ -1,33 +1,40 @@
+{% if show_loader %}
   <!-- Loader HTML -->
-    <div class="loader-wrapper" id="loader">
-      <div class="loader-container">
-        <div class="loader"></div>
-      </div>
+  <div class="loader-wrapper" id="loader">
+    <div class="loader-container">
+      <div class="loader"></div>
     </div>
+  </div>
 
-<script>
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
-  })
+  <script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
 
-  function showLoader() {
-    $('#loader').fadeIn('slow');
-  }
+    function showLoader() {
+      $('#loader').fadeIn('slow');
+    }
 
-  function hideLoader() {
-    $('#loader').fadeOut('slow');
-  }
+    function hideLoader() {
+      $('#loader').fadeOut('slow');
+    }
 
-  $(document).ready(function() {
-    $(window).on('load', function () {
-      hideLoader();
+    var pageLoaded = false;
+    $(document).ready(function() {
+      pageLoaded = true;
     });
+
     $(document).on('click', 'a:not([href^="#"])', function () {
-      showLoader();
+      if (pageLoaded) {
+        showLoader();
+      }
     });
+
     $(document).on('submit', 'form', function () {
-      showLoader();
+      if (pageLoaded) {
+        showLoader();
+      }
     });
-  });
-</script>
+  </script>
+{% endif %}
