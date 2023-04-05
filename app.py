@@ -1,5 +1,5 @@
 import eventlet
-from flask import Flask, redirect, request, session, url_for, render_template
+from flask import Flask, redirect, request, session, url_for, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
 import spotipy
@@ -41,6 +41,10 @@ socketio = SocketIO(app)
 Mobility(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
+@app.route('/static/<path:path>')
+@cache.cached(timeout=3600)
+def send_static(path):
+    return send_from_directory('static', path)
 
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
