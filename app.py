@@ -78,14 +78,6 @@ def timeout(seconds=30, error_message='Function call timed out'):
 
     return decorator
 
-def remove_duplicates(tracks):
-    unique_tracks = OrderedDict()
-    for track in tracks:
-        track_id = track['track']['id']
-        if track_id not in unique_tracks:
-            unique_tracks[track_id] = track
-    return list(unique_tracks.values())
-
 def delete_playlist(spotify_token, playlist_id):
     sp = spotipy.Spotify(auth=spotify_token)
     user_id = sp.me()['id']
@@ -175,6 +167,16 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
     start = offset
     end = offset + limit
     return playlists[start:end]
+
+def remove_duplicates(tracks):
+    unique_tracks = OrderedDict()
+    for track in tracks:
+        if track['track'] is not None:
+            track_id = track['track']['id']
+            if track_id not in unique_tracks:
+                unique_tracks[track_id] = track
+    return list(unique_tracks.values())
+
 
 @app.route('/playlists/')
 def playlists():
