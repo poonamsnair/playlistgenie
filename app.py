@@ -186,23 +186,6 @@ def get_playlist_tracks(spotify_client, playlist_id):
     tracks = playlist['tracks']['items']
     return tracks
 
-def get_playlists_cache_key():
-    user_id = session.get('spotify_user_id')
-    offset = request.args.get('offset', 0)
-    return f"playlists_{user_id}_{offset}"
-
-@cache.memoize(timeout=3600)
-def get_current_user_playlists(sp, limit, offset):
-    return sp.current_user_playlists(limit=limit, offset=offset)
-
-def get_playlist_tracks_cache_key(playlist_id):
-    return f"playlist_tracks_{playlist_id}"
-
-@cache.memoize(timeout=3600)
-def get_playlist_tracks(sp, playlist_id):
-    return sp.playlist_tracks(playlist_id)['items']
-
-
 def paginate_playlists(playlists: List, limit: int, offset: int):
     start = offset
     end = offset + limit
@@ -226,7 +209,7 @@ def playlists():
         api_offset = 0
 
         while len(raw_playlists) < offset + limit:
-            playlists_batch = get_current_user_playlists(sp, api_limit, api_offset)
+            playlists_batch = sp.current_user_playlists(limit=api_limit, offset=api_offset)
             if not playlists_batch['items']:
                 break
             raw_playlists.extend(playlists_batch['items'])
@@ -262,6 +245,7 @@ def playlists():
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+
 
 
 
@@ -416,10 +400,6 @@ def recommendation(playlist_id, rec_playlist_id):
         spotify_username = session['spotify_username']
         request_id = str(uuid.uuid4())
         threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username)).start()
-        
-        # Clear cache for playlists and playlist tracks
-        cache.delete(get_playlists_cache_key())
-        cache.delete(get_playlist_tracks_cache_key(playlist_id))
         
         # Clear session
         session.pop('rec_playlist_id', None)
