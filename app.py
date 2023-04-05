@@ -184,7 +184,7 @@ def playlists():
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
-        return render_template('playlist.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit)
     else:
         if request.user_agent.platform in ['iphone', 'android']:
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
