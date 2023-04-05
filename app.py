@@ -216,13 +216,17 @@ def playlists():
         for playlist in playlists['items']:
             tracks = get_playlist_tracks(sp, playlist['id'])
             unique_tracks = remove_duplicates(tracks)
-            unique_track_counts[playlist['id']] = len(unique_tracks)
+            count = len(unique_tracks)
 
             # Get playlist image
             if playlist['images']:
                 playlist_images[playlist['id']] = playlist['images'][0]['url']
             else:
                 playlist_images[playlist['id']] = None
+
+            # Add the playlist to the dictionary only if it has at least one unique track
+            if count > 0:
+                unique_track_counts[playlist['id']] = count
 
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
@@ -233,6 +237,7 @@ def playlists():
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+
 
 
 # Add a decorator to handle rate limits
