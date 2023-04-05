@@ -12,7 +12,6 @@
   </form>
   <script>
     const tracks = {{ tracks | tojson }};
-    const tracksContainer = document.getElementById('tracks-container');
     let currentTrackIndex = 0;
 
     function initializeRatingHoverEffect(container) {
@@ -80,7 +79,9 @@
       });
     }
 
-    loadMoreTracks(); 
-
+    document.addEventListener("DOMContentLoaded", function () {
+      const tracksContainer = document.getElementById("tracks-container");
+      loadMoreTracks();
+    });
   </script>
 {% endblock %}
