@@ -197,6 +197,25 @@ def get_playlist_tracks_cache_key(playlist_id):
 def get_playlist_tracks(sp, playlist_id):
     return sp.playlist_tracks(playlist_id)['items']
 
+def get_filtered_playlists(sp, offset, limit):
+    playlists = []
+    while len(playlists) < limit:
+        current_playlists = get_current_user_playlists(sp, limit, offset)
+        if not current_playlists['items']:
+            break
+        for playlist in current_playlists['items']:
+            tracks = get_playlist_tracks(sp, playlist['id'])
+            unique_tracks = remove_duplicates(tracks)
+            count = len(unique_tracks)
+            if count > 0:
+                playlist['unique_track_count'] = count
+                playlists.append(playlist)
+                if len(playlists) >= limit:
+                    break
+        offset += limit
+    return playlists, offset
+
+
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
@@ -210,7 +229,7 @@ def playlists():
     offset = int(request.args.get('offset', 0))
 
     if playlist_id is None:
-        playlists = get_current_user_playlists(sp, limit, offset)
+        playlists, next_offset = get_filtered_playlists(sp, offset, limit)
         unique_track_counts = {}
         playlist_images = {}
         for playlist in playlists['items']:
@@ -229,7 +248,7 @@ def playlists():
                 unique_track_counts[playlist['id']] = count
 
         previous_offset = max(offset - limit, 0)
-        total_playlists = playlists['total']
+        total_playlists = sum(1 for playlist in playlists['items'] if unique_track_counts.get(playlist['id']))
 
         return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
     else:
