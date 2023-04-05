@@ -20,12 +20,10 @@
     <title>{% block title %}Playlist Genie{% endblock %}</title>
   </head>
   <body class="{% block body_class %}{% endblock %}">
-    <!-- Loader HTML -->
-    <div class="loader-wrapper" id="loader">
-      <div class="loader-container">
-        <div class="loader"></div>
-      </div>
-    </div>
+      
+{% if request.path != url_for('index') and request.path != url_for('playlist') %}
+  {% include 'loader.html' %}
+{% endif %}
     
 {% if not request.path == url_for('index') %}
       <nav class="navbar navbar-expand-lg navbar-dark">
@@ -88,33 +86,5 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
       
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
-<script>
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
-  })
-
-  function showLoader() {
-    $('#loader').fadeIn('slow');
-  }
-
-  function hideLoader() {
-    $('#loader').fadeOut('slow');
-  }
-
-  $(document).ready(function() {
-    {% if request.path == url_for('index') or request.path == url_for('playlist_list') %}
-
-      $(window).on('load', function () {
-        hideLoader();
-      });
-      $(document).on('click', 'a:not([href^="#"])', function () {
-        showLoader();
-      });
-      $(document).on('submit', 'form', function () {
-        showLoader();
-      });
-    {% endif %}
-  });
-</script>
-
+  </body>
+</html>
