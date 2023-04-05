@@ -153,7 +153,6 @@ def generate_state():
 def index():
     if session.get('spotify_token') and not session.get('logged_out'):
         try:
-            refresh_access_token()
             return redirect(url_for('playlists'))
         except Exception as e:
             print(f"Error in refreshing access token: {e}")
@@ -161,10 +160,13 @@ def index():
 
     session.pop('logged_out', None)
     state = generate_state()
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    auth_url = auth_manager.get_authorize_url(state=state, show_dialog=True, prompt='login')
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
+                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE,
+                                show_dialog=True, prompt='login')
+    auth_url = auth_manager.get_authorize_url(state=state)
     session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
+
 
 @app.route('/logout')
 def logout():
