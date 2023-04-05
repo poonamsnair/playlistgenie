@@ -175,9 +175,9 @@ def logout():
 @app.route('/')
 def index():
     try:
-        logout()
+        session.pop('spotify_token', None)
+        session.pop('spotify_user_id', None)
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, show_dialog=True)
-        # Generate a random string to use as the state parameter
         state = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
 
         # Store the state parameter in the session
@@ -204,24 +204,29 @@ def get_username(access_token):
 
 
 
+last_access_token = None
+
 @app.route('/callback/')
 def callback():
+    global last_access_token
     try:
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, show_dialog=True)
 
-        # Retrieve the state parameter from the session
         stored_state = session.get('spotify_auth_state')
 
-        # Verify that the state parameter from the response matches the one stored in the session
         if not request.args.get('state') == stored_state:
             return redirect(url_for('index'))
 
-        # Retrieve the access and refresh tokens for the newly logged-in user and store them in the session
         token_info = auth_manager.get_access_token(request.args.get('code'))
         session['spotify_token'] = token_info['access_token']
         session['spotify_refresh_token'] = token_info['refresh_token']
 
-        # Retrieve the user's Spotify ID and store it in the session
+        # Check if the new access token is the same as the last one
+        if session['spotify_token'] == last_access_token:
+            raise ValueError("Access token is not unique!")
+
+        last_access_token = session['spotify_token']
+
         user_id = get_username(session['spotify_token'])
         session['spotify_user_id'] = user_id
 
@@ -230,6 +235,7 @@ def callback():
     except Exception as e:
         print(f"Error occurred during callback(): {e}")
         raise
+
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
