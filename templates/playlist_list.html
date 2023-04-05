@@ -12,8 +12,10 @@
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
-        {% for playlist in playlists['items'] %}
-            {% if unique_track_counts.get(playlist['id']) %}
+        {% set playlist_idx = (offset // limit) * limit %}
+        {% for i in range(limit) %}
+            {% set playlist = playlists['items'][playlist_idx] if playlist_idx < playlists['total'] else None %}
+            {% if playlist and unique_track_counts.get(playlist['id']) %}
                 {% set unique_track_count = unique_track_counts[playlist['id']] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="card playlist-card">
@@ -39,7 +41,8 @@
                     </div>
                 </div>
             </div>
-            {% endif %} <!-- This is the missing endif tag -->
+            {% endif %}
+            {% set playlist_idx = playlist_idx + 1 %}
         {% endfor %}
     </div>
     <nav aria-label="Page navigation example">
