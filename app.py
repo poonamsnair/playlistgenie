@@ -161,14 +161,10 @@ def index():
 
     session.pop('logged_out', None)
 
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     state = generate_state()
-    auth_url = auth_manager.get_authorize_url(state=state)
-    auth_url += "&show_dialog=true&prompt=login&rand=" + str(random.random()) 
+    auth_url = f"https://accounts.spotify.com/authorize?client_id={SPOTIPY_CLIENT_ID}&response_type=code&redirect_uri={SPOTIPY_REDIRECT_URI}&scope={SCOPE}&state={state}&show_dialog=true&prompt=login&rand={random.random()}"
     session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
-
 
 @app.route('/logout')
 def logout():
