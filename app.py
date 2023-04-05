@@ -35,6 +35,8 @@ from flask_caching import Cache
 from typing import List
 from flask_session import Session
 import secrets
+import random
+import string
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -143,7 +145,10 @@ def refresh_token_if_expired():
             session['spotify_token'] = token_info['access_token']   
 
             
-            
+def generate_state():
+    state = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+    return state
+
 @app.route('/')
 def index():
     if session.get('spotify_token') and not session.get('logged_out'):
@@ -158,10 +163,10 @@ def index():
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    state = secrets.token_urlsafe(16)  # Generate a random string for the state parameter
+    state = generate_state()
     auth_url = auth_manager.get_authorize_url(state=state)
-    auth_url += "&show_dialog=true&prompt=login"
-    session['auth_state'] = state  # Save the state parameter in the session
+    auth_url += "&show_dialog=true&prompt=login&rand=" + str(random.random()) 
+    session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
 
 
