@@ -37,6 +37,7 @@ from flask_session import Session
 import secrets
 import random
 import string
+import redis
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -44,7 +45,8 @@ app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
-app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_REDIS'] = redis.from_url(os.environ.get('REDIS_URL'))
 Session(app)
 
 
@@ -217,7 +219,7 @@ def callback():
     except Exception as e:
         print(f"Error in /callback: {e}")
         return redirect(url_for('index'))
-
+    
 @app.route('/logout')
 def logout():
     # Revoke the access token
@@ -232,7 +234,6 @@ def logout():
     session.clear()
 
     return redirect(url_for('index'))
-
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
