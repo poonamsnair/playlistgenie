@@ -140,8 +140,8 @@ def add_no_cache_headers(response):
     
 def get_spotify_client():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
-    if session.get('spotify_token_info'):
-        auth_manager.token_info = session.get('spotify_token_info')
+    if session.get('token_info'):
+        auth_manager.token_info = session.get('token_info')
     return spotipy.Spotify(auth_manager=auth_manager)
 
 @app.route('/logout/')
