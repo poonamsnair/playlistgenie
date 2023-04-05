@@ -122,16 +122,15 @@ def refresh_token_if_expired():
 def require_spotify_token(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not session.get('spotify_token'):
-            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                        redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
+        if not auth_manager.validate_token(session.get('spotify_token')):
             auth_url = auth_manager.get_authorize_url()
-            return render_template('index.html', auth_url=auth_url)
+            return redirect(auth_url)
         else:
-            refresh_token_if_expired() 
+            refresh_token_if_expired(auth_manager)
         return func(*args, **kwargs)
     return wrapper
-            
+
 @app.after_request
 def add_no_cache_headers(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
@@ -141,8 +140,8 @@ def add_no_cache_headers(response):
     
 def get_spotify_client():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
-    if session.get('token_info'):
-        auth_manager.token_info = session.get('token_info')
+    if session.get('spotify_token_info'):
+        auth_manager.token_info = session.get('spotify_token_info')
     return spotipy.Spotify(auth_manager=auth_manager)
 
 @app.route('/logout/')
