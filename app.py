@@ -392,7 +392,7 @@ def create_playlist(playlist_id):
 
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
 
-    # If the request is a GET and there's a rec_playlist_id in the session, delete the playlist and remove rec_playlist_id from the session
+# If the request is a GET and there's a rec_playlist_id in the session, delete the playlist if it's empty and remove rec_playlist_id from the session
     if request.method == 'GET' and 'rec_playlist_id' in session:
         sp = spotipy.Spotify(auth=session['spotify_token'])
         rec_playlist_id = session['rec_playlist_id']
@@ -400,8 +400,8 @@ def create_playlist(playlist_id):
         if tracks == 0:
             delete_playlist(session['spotify_token'], rec_playlist_id)
             session.pop('rec_playlist_id', None)
-        return redirect(url_for('index'))
-    
+            return redirect(url_for('index'))
+
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
 
