@@ -411,6 +411,15 @@ footer {
   transition: box-shadow 0.3s ease-in-out, opacity 0.5s ease-in-out;
   margin-bottom: 20px;
   opacity: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .rate-songs-card:hover {
@@ -431,7 +440,7 @@ footer {
 
 .rating-stars {
   display: flex;
-  justify-content:left !important; 
+  justify-content: center;
 }
 
 .rating-stars label {
@@ -453,7 +462,6 @@ footer {
 .rating-stars input[type="radio"] {
   display: none;
 }
-
 .rate-playlist-submit {
   text-align: center;
   padding-bottom: 30px !important;
