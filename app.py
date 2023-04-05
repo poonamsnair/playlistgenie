@@ -247,7 +247,7 @@ def get_mobile_rate_playlist_cache_key():
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-# @cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
+@cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -276,7 +276,7 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-# @cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
+@cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
