@@ -34,6 +34,7 @@ from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
 from flask_session import Session
+import secrets
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -157,8 +158,10 @@ def index():
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    auth_url = auth_manager.get_authorize_url()
+    state = secrets.token_urlsafe(16)  # Generate a random string for the state parameter
+    auth_url = auth_manager.get_authorize_url(state=state)
     auth_url += "&show_dialog=true&prompt=login"
+    session['auth_state'] = state  # Save the state parameter in the session
     return render_template('index.html', auth_url=auth_url)
 
 

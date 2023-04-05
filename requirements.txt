@@ -14,3 +14,4 @@ flask_mobility
 flask_caching
 flask_session
 typing
+secrets
