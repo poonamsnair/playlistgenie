@@ -141,11 +141,15 @@ def index():
 
     # Clear the logged_out session variable, if it exists
     session.pop('logged_out', None)
+    
+    # Invalidate the current access token
+    session['spotify_token_info'] = None
+    session['spotify_token'] = None
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     auth_url = auth_manager.get_authorize_url()
-    auth_url += "&show_dialog=true&prompt=login"  # Add the show_dialog parameter to the URL
+    auth_url += "&show_dialog=true&prompt=login"  # Add the show_dialog and prompt parameters to the URL
     return render_template('index.html', auth_url=auth_url)
 
 
