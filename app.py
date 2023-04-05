@@ -174,8 +174,11 @@ def index():
 
 def get_username(access_token):
     sp = spotipy.Spotify(auth=access_token)
+    print(f"Access token: {access_token}")
     user_data = sp.current_user()
+    print(f"User data: {user_data}")
     return user_data['id']
+
 
 
 
