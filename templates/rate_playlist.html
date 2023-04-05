@@ -5,9 +5,7 @@
   <h1 class="rate-songs-h1 mb-4">Rate Playlist</h1>
   <p class="body-text">Please rate and listen to the following tracks:</p>
   <form method="POST" action="{{ url_for('save_ratings', playlist_id=playlist_id) }}" id="rate-songs-form">
-    <div id="tracks-container">
-        <div class="tracks-row"></div>
-    </div>
+    <div id="tracks-container"></div>
     <br>
     <button type="submit" class="btn btn-playlist" style="margin-bottom: 20px;">Save Ratings</button>
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
@@ -64,7 +62,7 @@
           <p class="card-text">Artist: ${track.track.artists[0].name}</p>
           <p class="card-text">Album: ${track.track.album.name}</p>
           <div class="spotify-player">
-            <iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+            <iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="800" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
           </div>
           <div class="rating-stars">
             ${[...Array(10)].map((_, i) => `
@@ -78,26 +76,14 @@
         return trackCard;
       }
 
-    function loadMoreTracks() {
-      const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
-      let rowDiv = document.querySelector('.tracks-row:last-child');
-      let cardsInRow = 0;
-
-      tracksToLoad.forEach(track => {
-        const trackCard = createTrackCard(track);
-        rowDiv.appendChild(trackCard);
-        cardsInRow++;
-
-        if (cardsInRow === 2) {
-          rowDiv = document.createElement('div');
-          rowDiv.className = 'tracks-row';
-          tracksContainer.appendChild(rowDiv);
-          cardsInRow = 0;
-        }
-      });
-
-      currentTrackIndex += 10;
-    }
+      function loadMoreTracks() {
+        const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
+        tracksToLoad.forEach(track => {
+          const trackCard = createTrackCard(track);
+          tracksContainer.appendChild(trackCard);
+        });
+        currentTrackIndex += 10;
+      }
 
       function isScrolledNearBottom() {
         return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;

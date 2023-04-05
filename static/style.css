@@ -403,13 +403,6 @@ footer {
   flex-wrap: wrap;
 }
 
-.tracks-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
 .rate-songs-card {
   background: linear-gradient(135deg, #121212 0%, #323232 100%);
   color: #fff;
@@ -418,7 +411,6 @@ footer {
   transition: box-shadow 0.3s ease-in-out, opacity 0.5s ease-in-out;
   margin-bottom: 20px;
   opacity: 0;
-  margin-right: 20px;
 }
 
 .rate-songs-card:hover {
@@ -439,7 +431,7 @@ footer {
 
 .rating-stars {
   display: flex;
-  align-items: center;
+  align-items: left;
 }
 
 .rating-stars label {
