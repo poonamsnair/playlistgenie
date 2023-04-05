@@ -393,8 +393,10 @@ def create_playlist(playlist_id):
     if request.method == 'GET' and 'rec_playlist_id' in session:
         delete_playlist(session['spotify_token'], session['rec_playlist_id'])
         session.pop('rec_playlist_id', None)
+        return redirect(url_for('playlist_list'))
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
+
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
