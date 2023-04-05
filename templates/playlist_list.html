@@ -12,7 +12,7 @@
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
-        {% for playlist in playlists %}
+    {% for playlist in playlists %}
             {% set unique_track_count = unique_track_counts[playlist['id']] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="card playlist-card">

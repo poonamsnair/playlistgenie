@@ -33,6 +33,7 @@ from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
+from flask_session import Session
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -40,6 +41,8 @@ app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
@@ -162,6 +165,7 @@ def callback():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     token_info = auth_manager.get_access_token(request.args.get('code'))
+    session.clear()  # Clear any previous session data
     session['spotify_token_info'] = token_info
     session['spotify_token'] = token_info.get('access_token')
     sp = spotipy.Spotify(auth=session['spotify_token'])
