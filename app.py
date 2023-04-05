@@ -379,10 +379,6 @@ def recommendation(playlist_id, rec_playlist_id):
         spotify_username = session['spotify_username']
         request_id = str(uuid.uuid4())
         threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username)).start()
-        
-        # Clear session
-        session.pop('rec_playlist_id', None)
-        
         return render_template("recommendation_progress.html", request_id=request_id)
     else:
         return redirect(url_for("index"))
