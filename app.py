@@ -109,11 +109,6 @@ def inject_vars():
     vars = inject_stripe_keys()
     return vars
 
-def get_spotify_client(access_token):
-    client = spotipy.Spotify(auth=access_token)
-    return client
-
-
 def refresh_token_if_expired():
     if session.get('spotify_token_info'):
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
@@ -143,30 +138,17 @@ def add_no_cache_headers(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
     return response
-
-def require_spotify_token(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'spotify_token' not in session:
-            return redirect(url_for('index', next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def refresh_access_token(refresh_token):
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
-                                client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI,
-                                scope=SCOPE)
-
-    refreshed_token = auth_manager.refresh_access_token(refresh_token)
-    return refreshed_token['access_token']
     
-    
+def get_spotify_client():
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
+    if session.get('token_info'):
+        auth_manager.token_info = session.get('token_info')
+    return spotipy.Spotify(auth_manager=auth_manager)
+
 @app.route('/logout/')
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
 
 
 @app.route('/')
@@ -174,17 +156,6 @@ def index():
     sp = get_spotify_client()
     auth_url = sp.auth_manager.get_authorize_url()
     return render_template('index.html', auth_url=auth_url)
-
-def get_username(access_token):
-    try:
-        sp = spotipy.Spotify(auth=access_token)
-        print(f"Access token: {access_token}")
-        user_data = sp.current_user()
-        print(f"User data: {user_data}")
-        return user_data['id']
-    except Exception as e:
-        print(f"Error occurred during get_username(): {e}")
-        raise
 
 
 @app.route('/callback/')
@@ -211,8 +182,6 @@ def playlists():
     if not session.get('spotify_token'):
         return redirect(url_for('index'))
     sp = spotipy.Spotify(auth=session['spotify_token'])
-    logged_in_user = get_username(session['spotify_token'])
-    print(f"Loading playlists for user {logged_in_user}...")
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
@@ -253,8 +222,6 @@ def playlists():
         paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
         previous_offset = max(offset - limit, 0)
         total_playlists = len(filtered_playlists)
-
-        print(f"Loaded {len(raw_playlists)} playlists for user {logged_in_user}.")
         return render_template('playlist_list.html', playlists=paginated_playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
     else:
         if request.MOBILE:
