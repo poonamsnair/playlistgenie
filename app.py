@@ -52,7 +52,7 @@ SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playli
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
-
+user_data_store = {}
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -185,18 +185,15 @@ def callback():
         user_data = sp.current_user()
         print(f"User data in /callback: {user_data}")
         user_id = user_data['id']
-        
-        session[f'{user_id}_spotify_token_info'] = token_info
-        session[f'{user_id}_spotify_token'] = token_info.get('access_token')
-        session[f'{user_id}_spotify_user_id'] = user_id
-        session[f'{user_id}_user'] = {
-            'playlist_count': 0
+
+        user_data_store[user_id] = {
+            'spotify_token_info': token_info,
+            'spotify_token': token_info.get('access_token'),
+            'user': {'playlist_count': 0},
         }
-        print(f"User data in /callback: {user_data}")
-        session['spotify_username'] = user_data['id']
-        session['user'] = {
-            'playlist_count': 0
-        }
+
+        session['spotify_username'] = user_id
+
         return redirect(url_for('playlists'))
     except Exception as e:
         print(f"Error in /callback: {e}")
@@ -237,8 +234,11 @@ def playlists():
     limit = 12
     api_limit = 50
 
-    if not session.get(f'{user_id}_spotify_user_id'):
-        session[f'{user_id}_spotify_user_id'] = sp.current_user()['id']
+    if user_id not in user_data_store:
+        return redirect(url_for('index'))
+
+    user_data = user_data_store[user_id]
+    sp = spotipy.Spotify(auth=user_data['spotify_token'])
 
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
