@@ -354,8 +354,11 @@ def save_ratings(playlist_id):
         for track in tracks:
             track_id = track['track']['id']
             rating = request.form.get(f'rating-{track_id}')
+            # Set the default rating to 5 if no rating is given
             if rating:
                 ratings[track_id] = int(rating)
+            else:
+                ratings[track_id] = 5
         session['ratings'] = ratings
         session['playlist_id'] = playlist_id
         return redirect(url_for('create_playlist', playlist_id=playlist_id))
