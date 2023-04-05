@@ -147,11 +147,15 @@ def refresh_token_if_expired():
             
 @app.route('/logout/')
 def logout():
-    print("Logging out user...")
     logged_out_user = session.get('spotify_token')
-    session.pop('spotify_token', None)
-    print(f"User {logged_out_user} successfully logged out.")
+    if logged_out_user:
+        print(f"Logging out user {get_username(logged_out_user)}...")
+        session.pop('spotify_token', None)
+        print(f"User {logged_out_user} successfully logged out.")
+    else:
+        print("No user is currently logged in.")
     return redirect(url_for('index'))
+
 
 @app.route('/')
 def index():
@@ -184,7 +188,8 @@ def callback():
 
     token_info = auth_manager.get_access_token(request.args.get('code'))
     session['spotify_token'] = token_info['access_token']
-    print(f"New token received: {session['spotify_token']}")
+    new_user = get_username(session['spotify_token'])
+    print(f"New user {new_user} has logged in with access token {session['spotify_token']}.")
     return redirect(url_for('playlists'))
 
 def get_playlist_tracks(spotify_client, playlist_id):
