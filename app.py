@@ -123,6 +123,14 @@ def require_spotify_token(func):
         return func(*args, **kwargs)
     return wrapper
 
+def refresh_access_token():
+    if 'spotify_token_info' in session:
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
+                                    redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+        refreshed_token = auth_manager.refresh_access_token(session['spotify_token_info']['refresh_token'])
+        session['spotify_token_info'] = refreshed_token
+        session['spotify_token'] = refreshed_token['access_token']
+
 def refresh_token_if_expired():
     if session.get('spotify_token_info'):
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
@@ -134,22 +142,23 @@ def refresh_token_if_expired():
             session['spotify_token'] = token_info['access_token']   
 
             
+            
 @app.route('/')
 def index():
     if session.get('spotify_token') and not session.get('logged_out'):
-        return redirect(url_for('playlists'))
+        try:
+            refresh_access_token()
+            return redirect(url_for('playlists'))
+        except Exception as e:
+            print(f"Error in refreshing access token: {e}")
+            session.clear()
 
-    # Clear the logged_out session variable, if it exists
     session.pop('logged_out', None)
-    
-    # Invalidate the current access token
-    session['spotify_token_info'] = None
-    session['spotify_token'] = None
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     auth_url = auth_manager.get_authorize_url()
-    auth_url += "&show_dialog=true&prompt=login"  # Add the show_dialog and prompt parameters to the URL
+    auth_url += "&show_dialog=true&prompt=login"
     return render_template('index.html', auth_url=auth_url)
 
 
@@ -166,23 +175,25 @@ def logout():
 
 @app.route('/callback/')
 def callback():
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    token_info = auth_manager.get_access_token(request.args.get('code'))
-    
-    # Clear any previous session data before saving new user's data
-    session.clear()
-    
-    session['spotify_token_info'] = token_info
-    session['spotify_token'] = token_info.get('access_token')
-    sp = spotipy.Spotify(auth=session['spotify_token'])
-    user_data = sp.current_user()
-    print(f"User data in /callback: {user_data}")
-    session['spotify_username'] = user_data['id']
-    session['user'] = {
-        'playlist_count': 0
-    }
-    return redirect(url_for('index'))
+    try:
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
+                                    redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+        token_info = auth_manager.get_access_token(request.args.get('code'))
+
+        session.clear()
+        session['spotify_token_info'] = token_info
+        session['spotify_token'] = token_info.get('access_token')
+        sp = spotipy.Spotify(auth=session['spotify_token'])
+        user_data = sp.current_user()
+        print(f"User data in /callback: {user_data}")
+        session['spotify_username'] = user_data['id']
+        session['user'] = {
+            'playlist_count': 0
+        }
+        return redirect(url_for('index'))
+    except Exception as e:
+        print(f"Error in /callback: {e}")
+        return redirect(url_for('index'))
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
