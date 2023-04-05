@@ -165,11 +165,15 @@ def callback():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     token_info = auth_manager.get_access_token(request.args.get('code'))
-    session.clear()  # Clear any previous session data
+    
+    # Clear any previous session data before saving new user's data
+    session.clear()
+    
     session['spotify_token_info'] = token_info
     session['spotify_token'] = token_info.get('access_token')
     sp = spotipy.Spotify(auth=session['spotify_token'])
     user_data = sp.current_user()
+    print(f"User data in /callback: {user_data}")
     session['spotify_username'] = user_data['id']
     session['user'] = {
         'playlist_count': 0
