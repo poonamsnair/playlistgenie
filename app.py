@@ -190,10 +190,6 @@ def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 12
     api_limit = 50
-
-    if not session.get('spotify_user_id'):
-        session['spotify_user_id'] = sp.current_user()['id']
-
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
 
