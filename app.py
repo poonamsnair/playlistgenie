@@ -372,6 +372,10 @@ def create_playlist(playlist_id):
     if not session.get('spotify_token'):
         return redirect(url_for('index'))
 
+    # Redirect to the index page if the user tries to access the create playlist page after generating a playlist
+    if 'rec_playlist_id' in session:
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
         playlist_name = request.form['playlist_name']
         if not playlist_name:
@@ -393,9 +397,9 @@ def create_playlist(playlist_id):
     if request.method == 'GET' and 'rec_playlist_id' in session:
         delete_playlist(session['spotify_token'], session['rec_playlist_id'])
         session.pop('rec_playlist_id', None)
-        return redirect(url_for('playlist_list'))
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
+
 
 
 
