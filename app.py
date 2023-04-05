@@ -149,6 +149,35 @@ def generate_state():
     state = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
     return state
 
+def require_spotify_token(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get('spotify_username')
+
+        if user_id is None or user_id not in user_data_store:
+            return redirect(url_for('index'))
+
+        user_data = user_data_store[user_id]
+
+        token_info = user_data['spotify_token_info']
+        access_token = user_data['spotify_token']
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+
+        if auth_manager.is_token_expired(token_info):
+            try:
+                token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
+                access_token = token_info['access_token']
+                user_data['spotify_token_info'] = token_info
+                user_data['spotify_token'] = access_token
+            except Exception as e:
+                print(f"Error in refreshing access token: {e}")
+                return redirect(url_for('index'))
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 @app.route('/')
 def index():
     if session.get('spotify_token') and not session.get('logged_out'):
@@ -230,15 +259,15 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 @require_spotify_token
 def playlists():
     user_id = session['spotify_username']
-    sp = spotipy.Spotify(auth=session[f'{user_id}_spotify_token'])
-    limit = 12
-    api_limit = 50
 
     if user_id not in user_data_store:
         return redirect(url_for('index'))
 
     user_data = user_data_store[user_id]
     sp = spotipy.Spotify(auth=user_data['spotify_token'])
+
+    limit = 12
+    api_limit = 50
 
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
