@@ -37,6 +37,7 @@
               <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('logout') }}">Logout</a>
               </li>
+            {% if not request.path == url_for('logout') %}
               <li class="nav-item">
                 <!-- Add the Stripe Buy Button script -->
                 <script async src="https://js.stripe.com/v3/buy-button.js"></script>
