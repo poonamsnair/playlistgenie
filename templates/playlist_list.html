@@ -17,7 +17,12 @@
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="card playlist-card">
                     <div class="card-body">
-                        <h5 class="card-title" title="{{ playlist['name'] }}">{{ playlist['name'] }}</h5>
+                        <h5 class="card-title">
+                            {% if playlist_images[playlist['id']] %}
+                                <img src="{{ playlist_images[playlist['id']] }}" class="playlist-img mr-2" alt="{{ playlist['name'] }}">
+                            {% endif %}
+                            {{ playlist['name'] }}
+                        </h5>
                         <p class="card-text">Tracks: {{ unique_track_count }}</p>
                         {% if unique_track_count >= 5 and unique_track_count <= 100 %}
                             {% if request.MOBILE %}

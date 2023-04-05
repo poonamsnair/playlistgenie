@@ -212,14 +212,22 @@ def playlists():
     if playlist_id is None:
         playlists = get_current_user_playlists(sp, limit, offset)
         unique_track_counts = {}
+        playlist_images = {}
         for playlist in playlists['items']:
             tracks = get_playlist_tracks(sp, playlist['id'])
             unique_tracks = remove_duplicates(tracks)
             unique_track_counts[playlist['id']] = len(unique_tracks)
+
+            # Get playlist image
+            if playlist['images']:
+                playlist_images[playlist['id']] = playlist['images'][0]['url']
+            else:
+                playlist_images[playlist['id']] = None
+
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
 
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
     else:
         if request.MOBILE:
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
