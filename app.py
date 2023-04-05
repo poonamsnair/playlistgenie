@@ -52,7 +52,6 @@ SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playli
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
-user_data_store = {}
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -154,21 +153,19 @@ def require_spotify_token(func):
     def wrapper(*args, **kwargs):
         user_id = session.get('spotify_username')
 
-        if user_id is None or user_id not in user_data_store:
+        if user_id is None or f'{user_id}_spotify_token' not in session:
             return redirect(url_for('index'))
 
-        user_data = user_data_store[user_id]
-
-        token_info = user_data['spotify_token_info']
-        access_token = user_data['spotify_token']
+        token_info = session[f'{user_id}_spotify_token_info']
+        access_token = session[f'{user_id}_spotify_token']
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
 
         if auth_manager.is_token_expired(token_info):
             try:
                 token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
                 access_token = token_info['access_token']
-                user_data['spotify_token_info'] = token_info
-                user_data['spotify_token'] = access_token
+                session[f'{user_id}_spotify_token_info'] = token_info
+                session[f'{user_id}_spotify_token'] = access_token
             except Exception as e:
                 print(f"Error in refreshing access token: {e}")
                 return redirect(url_for('index'))
@@ -207,21 +204,14 @@ def callback():
         token_info = auth_manager.get_access_token(request.args.get('code'))
 
         session.clear()
-        session['spotify_token_info'] = token_info
-        session['spotify_token'] = token_info.get('access_token')
-
-        sp = spotipy.Spotify(auth=session['spotify_token'])
+        sp = spotipy.Spotify(auth=token_info['access_token'])
         user_data = sp.current_user()
         print(f"User data in /callback: {user_data}")
         user_id = user_data['id']
 
-        user_data_store[user_id] = {
-            'spotify_token_info': token_info,
-            'spotify_token': token_info.get('access_token'),
-            'user': {'playlist_count': 0},
-        }
-
         session['spotify_username'] = user_id
+        session[f'{user_id}_spotify_token_info'] = token_info
+        session[f'{user_id}_spotify_token'] = token_info.get('access_token')
 
         return redirect(url_for('playlists'))
     except Exception as e:
@@ -259,13 +249,7 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 @require_spotify_token
 def playlists():
     user_id = session['spotify_username']
-
-    if user_id not in user_data_store:
-        return redirect(url_for('index'))
-
-    user_data = user_data_store[user_id]
-    sp = spotipy.Spotify(auth=user_data['spotify_token'])
-
+    sp = spotipy.Spotify(auth=session[f'{user_id}_spotify_token'])
     limit = 12
     api_limit = 50
 
