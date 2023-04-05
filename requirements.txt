@@ -12,3 +12,4 @@ greenlet
 tenacity
 flask_mobility
 flask_caching
+typing

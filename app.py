@@ -32,6 +32,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
 from flask_caching import Cache
+from typing import List
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -197,40 +198,66 @@ def get_playlist_tracks_cache_key(playlist_id):
 def get_playlist_tracks(sp, playlist_id):
     return sp.playlist_tracks(playlist_id)['items']
 
+
+def paginate_playlists(playlists: List, limit: int, offset: int):
+    start = offset
+    end = offset + limit
+    return playlists[start:end]
+
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
-    limit = 10
+    limit = 12
+    api_limit = 50
 
     if not session.get('spotify_user_id'):
         session['spotify_user_id'] = sp.current_user()['id']
 
+    playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
 
-    raw_playlists = get_current_user_playlists(sp, limit, offset)
+    if playlist_id is None:
+        raw_playlists = []
+        api_offset = 0
 
-    # Filter playlists with more than 0 unique tracks
-    filtered_playlists = []
-    for playlist in raw_playlists['items']:
-        tracks = get_playlist_tracks(sp, playlist['id'])
-        unique_tracks = remove_duplicates(tracks)
-        count = len(unique_tracks)
+        while len(raw_playlists) < offset + limit:
+            playlists_batch = get_current_user_playlists(sp, api_limit, api_offset)
+            if not playlists_batch['items']:
+                break
+            raw_playlists.extend(playlists_batch['items'])
+            api_offset += api_limit
 
-        if count > 0:
-            playlist['unique_track_count'] = count
-            playlist['playlist_image'] = playlist['images'][0]['url'] if playlist['images'] else None
-            filtered_playlists.append(playlist)
+        unique_track_counts = {}
+        playlist_images = {}
+        filtered_playlists = []
 
-    # Calculate pagination
-    total_playlists = len(filtered_playlists)
-    previous_offset = max(offset - limit, 0)
+        for playlist in raw_playlists:
+            tracks = get_playlist_tracks(sp, playlist['id'])
+            unique_tracks = remove_duplicates(tracks)
+            count = len(unique_tracks)
 
-    # Apply pagination
-    paginated_playlists = filtered_playlists[offset:offset + limit]
+            # Get playlist image
+            if playlist['images']:
+                playlist_images[playlist['id']] = playlist['images'][0]['url']
+            else:
+                playlist_images[playlist['id']] = None
 
-    return render_template('playlist_list.html', playlists=paginated_playlists, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
+            # Add the playlist to filtered_playlists if it has at least one unique track
+            if count > 0:
+                unique_track_counts[playlist['id']] = count
+                filtered_playlists.append(playlist)
 
+        paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
+        previous_offset = max(offset - limit, 0)
+        total_playlists = len(filtered_playlists)
+
+        return render_template('playlist_list.html', playlists=paginated_playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
+    else:
+        if request.MOBILE:
+            return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
+        else:
+            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
 
 
