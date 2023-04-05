@@ -11,11 +11,6 @@
     <a href="{{ url_for('playlists') }}" class="btn btn-primary" style="margin-bottom: 20px;">Back</a>
   </form>
   <script>
-      
-    function isMobile() {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-
     const tracks = {{ tracks | tojson }};
     const tracksContainer = document.getElementById('tracks-container');
     let currentTrackIndex = 0;
@@ -57,75 +52,166 @@
       updateRating(defaultRating);
     }
 
-        function createTrackCard(track) {
-          const trackCard = document.createElement('div');
-          trackCard.className = 'rate-songs-card';
-          trackCard.innerHTML = `
-            <div class="card-body">
-              <h5 class="card-title">${track.track.name}</h5>
-              <p class="card-text">Artist: ${track.track.artists[0].name}</p>
-              <p class="card-text">Album: ${track.track.album.name}</p>
-              <div class="spotify-player">
-                ${
-                  isMobile()
-                    ? `<img src="${track.track.album.images[0].url}" alt="Album Art" width="300" height="300">`
-                    : `<iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>`
-                }
-              </div>
-              <div class="rating-stars">
-                ${[...Array(10)].map((_, i) => `
-                  <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
-                  <label for="rating-${i + 1}-${track.track.id}">${i + 1}</label>
-                `).join('')}
-              </div>
-            </div>
-          `;
-          initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
-          return trackCard;
+     // Replace with your own Spotify access token
+    const accessToken = "{{ access_token }}";
+    let player;
+
+    // Initialize the Spotify Web Playback SDK
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      player = new Spotify.Player({
+        name: 'Web Playback SDK Quick Start Player',
+        getOAuthToken: (cb) => { cb(accessToken); },
+      });
+
+      // Error handling
+      player.addListener('initialization_error', ({ message }) => { console.error(message); });
+      player.addListener('authentication_error', ({ message }) => { console.error(message); });
+      player.addListener('account_error', ({ message }) => { console.error(message); });
+      player.addListener('playback_error', ({ message }) => { console.error(message); });
+
+      // Playback status updates
+      player.addListener('player_state_changed', (state) => { console.log(state); });
+
+      // Ready
+      player.addListener('ready', ({ device_id }) => {
+        console.log('Ready with Device ID', device_id);
+      });
+
+      // Not Ready
+      player.addListener('not_ready', ({ device_id }) => {
+        console.log('Device ID has gone offline', device_id);
+      });
+
+      // Connect to the player!
+      player.connect();
+    };
+
+      
+    function createTrackCard(track) {
+      const trackCard = document.createElement('div');
+      trackCard.className = 'rate-songs-card';
+      trackCard.innerHTML = `
+        <div class="card-body">
+          <h5 class="card-title">${track.track.name}</h5>
+          <p class="card-text">Artist: ${track.track.artists[0].name}</p>
+          <p class="card-text">Album: ${track.track.album.name}</p>
+          <div class="spotify-player" data-track-id="${track.track.id}"></div>
+          <button class="btn-play">Play</button>
+          <button class="btn-pause">Pause</button>
+          <div class="rating-stars">
+            ${[...Array(10)].map((_, i) => `
+              <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
+              <label for="rating-${i + 1}-${track.track.id}">${i + 1}</label>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
+      return trackCard;
+    }
+      
+
+    // Modify the loadPlayer function to set up the play and pause buttons for the track
+    function loadPlayer(trackCard) {
+      const trackId = trackCard.querySelector('.spotify-player').dataset.trackId;
+      const playButton = trackCard.querySelector('.btn-play');
+      const pauseButton = trackCard.querySelector('.btn-pause');
+
+      playButton.addEventListener('click', () => {
+        play(trackId);
+      });
+
+      pauseButton.addEventListener('click', () => {
+        pause();
+      });
+    }
+
+    async function fetchTracksFromSpotify(startIndex, endIndex) {
+      const trackIds = tracks.slice(startIndex, endIndex).map(track => track.track.id);
+      const trackIdsString = trackIds.join(',');
+
+      const response = await fetch(`https://api.spotify.com/v1/tracks?ids=${trackIdsString}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
         }
+      });
 
-
-      function loadMoreTracks() {
-        const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
-        tracksToLoad.forEach(track => {
-          const trackCard = createTrackCard(track);
-          tracksContainer.appendChild(trackCard);
-        });
-        currentTrackIndex += 10;
+      if (!response.ok) {
+        throw new Error(`Error fetching tracks: ${response.statusText}`);
       }
 
+      const data = await response.json();
+      return data.tracks;
+    }
+
+    // Modify the play function to use trackId
+    function play(trackId) {
+      // Set the track to play
+      player._options.getOAuthToken(access_token => {
+        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${player._options.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ uris: [`spotify:track:${trackId}`] }),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${access_token}`
+          },
+        })
+        .then(() => {
+          console.log('Playback started');
+        })
+        .catch((error) => {
+          console.error('Playback error:', error);
+        });
+      });
+    }
+
+    // Pause playback
+    function pause() {
+      player.pause()
+        .then(() => {
+          console.log('Playback paused');
+        })
+        .catch((error) => {
+          console.error('Pause error:', error);
+        });
+    }
+
+    async function loadMoreTracks() {
+      // Use Spotify Web SDK to fetch track data
+      const tracksToLoad = await fetchTracksFromSpotify(currentTrackIndex, currentTrackIndex + 10);
+
+      tracksToLoad.forEach(track => {
+        const trackCard = createTrackCard(track);
+        tracksContainer.appendChild(trackCard);
+      });
+      currentTrackIndex += 10;
+    }
+      
       function isScrolledNearBottom() {
         return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
       }
 
-      function loadIframe(iframe) {
-         if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
-           iframe.onload = function() {
-             iframe.closest('.rate-songs-card').classList.add('loaded');
-        };
-           iframe.setAttribute('src', iframe.getAttribute('data-src'));
-      }
-    }
-      function loadVisibleIframes() {
-        const iframes = document.querySelectorAll('.spotify-player iframe');
-        iframes.forEach(iframe => {
-          const rect = iframe.getBoundingClientRect();
-          if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-            loadIframe(iframe);
-          }
-        });
-      }
-
-      function handleScroll() {
-        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-          loadMoreTracks();
+      
+    function loadVisiblePlayers() {
+      const trackCards = document.querySelectorAll('.rate-songs-card');
+      trackCards.forEach(trackCard => {
+        const rect = trackCard.getBoundingClientRect();
+        if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+          loadPlayer(trackCard);
         }
-        loadVisibleIframes();
+      });
+    }
+
+    function handleScroll() {
+      if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
+        loadMoreTracks();
       }
+      loadVisiblePlayers();
+    }
 
-      window.addEventListener('scroll', handleScroll);
-      loadMoreTracks();
-      loadVisibleIframes();
-
+window.addEventListener('scroll', handleScroll);
+loadMoreTracks();
+loadVisiblePlayers();
+      
     </script>
     {% endblock %}

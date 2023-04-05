@@ -219,12 +219,12 @@ def rate_playlist(playlist_id):
                 track_info = sp.track(track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
-            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)
+            # Add the access token to the context
+            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
         except Exception as e:
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
         return redirect(url_for('index'))
-
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
