@@ -136,7 +136,13 @@ def refresh_token_if_expired():
             session['spotify_token_info'] = token_info
             session['spotify_token'] = token_info['access_token']   
             
-            
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 def require_spotify_token(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -182,7 +188,7 @@ def index():
 
         # Store the state parameter in the session
         session['spotify_auth_state'] = state
-
+        print(f"Current session data: {session}")
         auth_url = auth_manager.get_authorize_url(state=state)
         print(f"New auth URL generated: {auth_url}")
         return render_template('index.html', auth_url=auth_url)
