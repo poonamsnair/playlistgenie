@@ -147,12 +147,16 @@ def refresh_token_if_expired():
             
 @app.route('/logout/')
 def logout():
+    print("Logging out user...")
+    logged_out_user = session.get('spotify_token')
     session.pop('spotify_token', None)
+    print(f"User {logged_out_user} successfully logged out.")
     return redirect(url_for('index'))
 
 @app.route('/')
 def index():
     if session.get('spotify_token'):
+        print(f"User {get_username(session['spotify_token'])} is already logged in.")
         return redirect(url_for('playlists'))
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
@@ -160,7 +164,15 @@ def index():
                                 redirect_uri=SPOTIPY_REDIRECT_URI,
                                 scope=SCOPE)
     auth_url = auth_manager.get_authorize_url()
+    print(f"New auth URL generated: {auth_url}")
     return render_template('index.html', auth_url=auth_url)
+
+
+def get_username(access_token):
+    sp = spotipy.Spotify(auth=access_token)
+    user_data = sp.current_user()
+    return user_data['id']
+
 
 
 @app.route('/callback/')
@@ -172,6 +184,7 @@ def callback():
 
     token_info = auth_manager.get_access_token(request.args.get('code'))
     session['spotify_token'] = token_info['access_token']
+    print(f"New token received: {session['spotify_token']}")
     return redirect(url_for('playlists'))
 
 def get_playlist_tracks(spotify_client, playlist_id):
@@ -188,10 +201,13 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 @require_spotify_token
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
+    logged_in_user = get_username(session['spotify_token'])
+    print(f"Loading playlists for user {logged_in_user}...")
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
+    ...
 
     if playlist_id is None:
         raw_playlists = []
