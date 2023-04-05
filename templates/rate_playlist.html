@@ -75,20 +75,14 @@
         return trackCard;
       }
 
-      function loadMoreTracks() {
-        const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
-        tracksToLoad.forEach(track => {
+      function loadAllTracks() {
+        tracks.forEach(track => {
           const trackCard = createTrackCard(track);
           tracksContainer.appendChild(trackCard);
         });
-        currentTrackIndex += 10;
       }
 
-      function isScrolledNearBottom() {
-        return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
-      }
-
-      function loadIframe(iframe) {
+     function loadIframe(iframe) {
          if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
            iframe.onload = function() {
              iframe.closest('.rate-songs-card').classList.add('loaded');
@@ -96,6 +90,7 @@
            iframe.setAttribute('src', iframe.getAttribute('data-src'));
       }
     }
+
       function loadVisibleIframes() {
         const iframes = document.querySelectorAll('.spotify-player iframe');
         iframes.forEach(iframe => {
@@ -106,16 +101,7 @@
         });
       }
 
-      function handleScroll() {
-        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-          loadMoreTracks();
-        }
-        loadVisibleIframes();
-      }
-
-      window.addEventListener('scroll', handleScroll);
-      loadMoreTracks();
+      loadAllTracks();
       loadVisibleIframes();
-
     </script>
     {% endblock %}
