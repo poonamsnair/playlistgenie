@@ -153,14 +153,17 @@ def index():
 
 @app.route('/logout')
 def logout():
-    # Clear the user's cache
-    cache_key = f"playlist_{session.get('spotify_user_id')}"
-    cache.delete(cache_key)    
+    # Clear the cache
+    cache.clear()
+
+    # Clear session variables
     session.pop('spotify_token', None)
     session.pop('spotify_username', None)
     session.pop('spotify_user_id', None)
     session['logged_out'] = True
+
     return redirect(url_for('index'))
+
 
 @app.route('/callback/')
 def callback():
