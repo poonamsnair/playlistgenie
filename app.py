@@ -327,6 +327,7 @@ def save_ratings(playlist_id):
                 ratings[track_id] = 5
         session['ratings'] = ratings
         session['playlist_id'] = playlist_id
+        session['from_save_ratings'] = True
         return redirect(url_for('create_playlist', playlist_id=playlist_id))
     else:
         return redirect(url_for('index'))
@@ -336,8 +337,11 @@ def save_ratings(playlist_id):
 @require_spotify_token
 def create_playlist(playlist_id):
     if not session.get('spotify_token'):
+        return redirect(url_for('index'))   
+    if not session.get('from_save_ratings'):
         return redirect(url_for('index'))
-
+    else:
+        session.pop('from_save_ratings', None)
     if request.method == 'POST':
         playlist_name = request.form['playlist_name']
         if not playlist_name:
@@ -354,14 +358,6 @@ def create_playlist(playlist_id):
         session['rec_playlist_id'] = rec_playlist_id
 
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
-
-# If the request is a GET and there's a rec_playlist_id in the session, delete the playlist if it's empty and remove rec_playlist_id from the session
-    if request.method == 'GET' and 'rec_playlist_id' in session:
-        sp = spotipy.Spotify(auth=session['spotify_token'])
-        rec_playlist_id = session['rec_playlist_id']
-        tracks = sp.playlist_tracks(rec_playlist_id, fields='total')['total']
-        if tracks == 0:
-            return redirect(url_for('index'))
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
