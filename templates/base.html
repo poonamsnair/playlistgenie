@@ -34,12 +34,9 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ml-auto">
-            {% if 'user' in session %}
               <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('logout') }}">Logout</a>
               </li>
-            {% endif %}
-            {% if not request.path == url_for('logout') %}
               <li class="nav-item">
                 <!-- Add the Stripe Buy Button script -->
                 <script async src="https://js.stripe.com/v3/buy-button.js"></script>
