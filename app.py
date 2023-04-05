@@ -129,11 +129,7 @@ def refresh_token_if_expired():
         if auth_manager.is_token_expired(token_info):
             token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
             session['spotify_token_info'] = token_info
-            session['spotify_token'] = token_info['access_token']
-
-def get_playlist_cache_key():
-    playlist_key = f"playlist_{session.get('spotify_user_id')}"
-    return playlist_key     
+            session['spotify_token'] = token_info['access_token']   
 
 def get_rate_playlist_cache_key():
     playlist_id = request.view_args['playlist_id']
@@ -188,9 +184,24 @@ def get_playlist_tracks(spotify_client, playlist_id):
     return tracks
 
 
+def get_playlists_cache_key():
+    user_id = session.get('spotify_user_id')
+    offset = request.args.get('offset', 0)
+    return f"playlists_{user_id}_{offset}"
+
+@cache.memoize(timeout=3600)
+def get_current_user_playlists(sp, limit, offset):
+    return sp.current_user_playlists(limit=limit, offset=offset)
+
+def get_playlist_tracks_cache_key(playlist_id):
+    return f"playlist_tracks_{playlist_id}"
+
+@cache.memoize(timeout=3600)
+def get_playlist_tracks(sp, playlist_id):
+    return sp.playlist_tracks(playlist_id)['items']
+
 @app.route('/playlists/')
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix=get_playlist_cache_key)
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 10
@@ -202,10 +213,10 @@ def playlists():
     offset = int(request.args.get('offset', 0))
 
     if playlist_id is None:
-        playlists = sp.current_user_playlists(limit=limit, offset=offset)
+        playlists = get_current_user_playlists(sp, limit, offset)
         unique_track_counts = {}
         for playlist in playlists['items']:
-            tracks = sp.playlist_tracks(playlist['id'])['items']
+            tracks = get_playlist_tracks(sp, playlist['id'])
             unique_tracks = remove_duplicates(tracks)
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
@@ -217,6 +228,7 @@ def playlists():
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+
 
 
 
