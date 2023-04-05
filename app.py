@@ -42,6 +42,7 @@ Mobility(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 
+
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
@@ -71,9 +72,6 @@ def timeout(seconds=30, error_message='Function call timed out'):
         return wraps(func)(wrapper)
 
     return decorator
-
-def get_user_cache_key():
-    return f"user:{session.get('spotify_user_id')}"
 
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
@@ -147,14 +145,10 @@ def index():
 
 @app.route('/logout')
 def logout():
-    cache_key_prefix = get_user_cache_key() + '*'
-    cache.delete_many(cache_key for cache_key in cache.iter_keys() if cache_key.startswith(cache_key_prefix))
-    
     session.pop('spotify_token', None)
     session.pop('spotify_username', None)
     session.pop('spotify_user_id', None)
     return redirect(url_for('index'))
-
 
 @app.route('/callback/')
 def callback():
@@ -180,8 +174,10 @@ def get_playlist_tracks(spotify_client, playlist_id):
     tracks = playlist['tracks']['items']
     return tracks
 
+
 @app.route('/playlists/')
 @require_spotify_token
+@cache.cached(timeout=3600, key_prefix='playlist_{}'.format(session.get('spotify_user_id')))
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 10
@@ -202,11 +198,6 @@ def playlists():
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
 
-        # Store the playlists, unique track counts, and total number of playlists in the cache
-        cache.set(session['spotify_user_id'] + '_playlists', playlists)
-        cache.set(session['spotify_user_id'] + '_unique_track_counts', unique_track_counts)
-        cache.set(session['spotify_user_id'] + '_total_playlists', total_playlists)
-
         return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
     else:
         if request.MOBILE:
@@ -214,9 +205,10 @@ def playlists():
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
+
+
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-@cache.cached(timeout=300, key_prefix=get_user_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -224,50 +216,9 @@ def rate_playlist(playlist_id):
     if session.get('spotify_token'):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
-
-            # Retrieve the playlists, unique track counts, and total number of playlists from the cache
-            playlists = cache.get(session['spotify_user_id'] + '_playlists')
-            unique_track_counts = cache.get(session['spotify_user_id'] + '_unique_track_counts')
-            total_playlists = cache.get(session['spotify_user_id'] + '_total_playlists')
 
             tracks = get_playlist_tracks(sp, playlist_id)
             unique_tracks = remove_duplicates(tracks)
-
-            if 'ratings' in session and playlist_id in session['ratings']:
-                return redirect(url_for('recommendation', playlist_id=playlist_id))
-
-            for track in unique_tracks:
-                track_info = sp.track(track['track']['id'])
-                track['spotify_uri'] = track_info['uri']
-
-            # Add the access token to the context
-            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'], playlists=playlists, unique_track_counts=unique_track_counts, total_playlists=total_playlists)
-        except Exception as e:
-            return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
-    else:
-        return redirect(url_for('index'))
-
-
-
-@app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
-def rate_playlist(playlist_id):
-    if request.MOBILE:
-        return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
-    
-    if session.get('spotify_token'):
-        try:
-            sp = spotipy.Spotify(auth=session['spotify_token'])
-
-            # Retrieve the playlist tracks from the cache if it exists
-            playlist_tracks = cache.get(session['spotify_user_id'] + '_' + playlist_id + '_tracks')
-
-            # If the playlist tracks are not cached, retrieve them from Spotify and cache them
-            if playlist_tracks is None:
-                playlist_tracks = get_playlist_tracks(sp, playlist_id)
-                cache.set(session['spotify_user_id'] + '_' + playlist_id + '_tracks', playlist_tracks)
-
-            unique_tracks = remove_duplicates(playlist_tracks)
 
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
@@ -283,6 +234,7 @@ def rate_playlist(playlist_id):
     else:
         return redirect(url_for('index'))
 
+
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def mobile_rate_playlist(playlist_id):
@@ -293,15 +245,8 @@ def mobile_rate_playlist(playlist_id):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
 
-            # Retrieve the playlist tracks from the cache if it exists
-            playlist_tracks = cache.get(session['spotify_user_id'] + '_' + playlist_id + '_tracks')
-
-            # If the playlist tracks are not cached, retrieve them from Spotify and cache them
-            if playlist_tracks is None:
-                playlist_tracks = get_playlist_tracks(sp, playlist_id)
-                cache.set(session['spotify_user_id'] + '_' + playlist_id + '_tracks', playlist_tracks)
-
-            unique_tracks = remove_duplicates(playlist_tracks)
+            tracks = get_playlist_tracks(sp, playlist_id)
+            unique_tracks = remove_duplicates(tracks)
 
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
@@ -316,7 +261,6 @@ def mobile_rate_playlist(playlist_id):
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
         return redirect(url_for('index'))
-
 
 
 
