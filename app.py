@@ -162,7 +162,7 @@ def index():
     state = generate_state()
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE,
-                                show_dialog=True)
+                                show_dialog=False)
     auth_url = auth_manager.get_authorize_url(state=state)
     session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
