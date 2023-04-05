@@ -40,12 +40,7 @@ app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
-@app.route('/static/<path:path>')
-@cache.cached(timeout=3600)
-def send_static(path):
-    return send_from_directory('static', path)
 
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
@@ -153,9 +148,6 @@ def index():
 
 @app.route('/logout')
 def logout():
-    # Clear the cache
-    cache.clear()
-
     # Clear session variables
     session.pop('spotify_token', None)
     session.pop('spotify_username', None)
@@ -260,20 +252,8 @@ def get_playlist_tracks_with_retry(sp, playlist_id):
 def sp_track_with_retry(sp, track_id):
     return sp.track(track_id)
 
-
-def get_rate_playlist_cache_key():
-    playlist_id = request.view_args['playlist_id']
-    user_id = session.get('spotify_user_id')
-    return f"rate_playlist_{user_id}_{playlist_id}"
-
-def get_mobile_rate_playlist_cache_key():
-    playlist_id = request.view_args['playlist_id']
-    user_id = session.get('spotify_user_id')
-    return f"mobile_rate_playlist_{user_id}_{playlist_id}"
-
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -302,7 +282,6 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
@@ -407,7 +386,6 @@ def recommendation(playlist_id, rec_playlist_id):
         return render_template("recommendation_progress.html", request_id=request_id)
     else:
         return redirect(url_for("index"))
-
 
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
