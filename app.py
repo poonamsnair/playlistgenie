@@ -133,7 +133,17 @@ def refresh_token_if_expired():
 
 def get_playlist_cache_key():
     playlist_key = f"playlist_{session.get('spotify_user_id')}"
-    return playlist_key        
+    return playlist_key     
+
+def get_rate_playlist_cache_key():
+    playlist_id = request.view_args['playlist_id']
+    user_id = session.get('spotify_user_id')
+    return f"rate_playlist_{user_id}_{playlist_id}"
+
+def get_mobile_rate_playlist_cache_key():
+    playlist_id = request.view_args['playlist_id']
+    user_id = session.get('spotify_user_id')
+    return f"mobile_rate_playlist_{user_id}_{playlist_id}"
 
 @app.route('/')
 def index():
@@ -212,6 +222,7 @@ def playlists():
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
+@cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -240,6 +251,7 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
+@cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
