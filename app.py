@@ -131,6 +131,9 @@ def refresh_token_if_expired():
             session['spotify_token_info'] = token_info
             session['spotify_token'] = token_info['access_token']
 
+def get_playlist_cache_key():
+    playlist_key = f"playlist_{session.get('spotify_user_id')}"
+    return playlist_key        
 
 @app.route('/')
 def index():
@@ -177,7 +180,7 @@ def get_playlist_tracks(spotify_client, playlist_id):
 
 @app.route('/playlists/')
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix='playlist_{}'.format(session.get('spotify_user_id')))
+@cache.cached(timeout=3600, key_prefix=get_playlist_cache_key)
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 10
