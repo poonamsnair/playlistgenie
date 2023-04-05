@@ -432,7 +432,6 @@ def recommendation(playlist_id, rec_playlist_id):
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
-        session.clear()
         delete_playlist(spotify_token, rec_playlist_id)
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth=spotify_token)
