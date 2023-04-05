@@ -47,7 +47,7 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 def send_static(path):
     return send_from_directory('static', path)
 
-SCOPE = 'user-library-read playlist-modify-public playlist-read-private streaming'
+SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
