@@ -117,24 +117,5 @@
      window.addEventListener('scroll', handleScroll);
       loadMoreTracks();
       loadVisibleIframes();
-
-      // Disable save button on page load
-      const saveButton = document.querySelector('button[type="submit"]');
-      saveButton.disabled = true;
-
-      // Enable save button when all iframes have loaded
-      window.addEventListener('load', () => {
-        const iframes = document.querySelectorAll('.spotify-player iframe');
-        iframes.forEach(iframe => {
-          if (iframe.getAttribute('data-src')) {
-            iframe.addEventListener('load', () => {
-              loadedIframes++;
-              if (loadedIframes === iframes.length) {
-                saveButton.disabled = false;
-              }
-            });
-          }
-        });
-      });
     </script>
     {% endblock %}
