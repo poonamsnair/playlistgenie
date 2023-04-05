@@ -131,16 +131,7 @@ def refresh_token_if_expired():
             session['spotify_token_info'] = token_info
             session['spotify_token'] = token_info['access_token']   
 
-def get_rate_playlist_cache_key():
-    playlist_id = request.view_args['playlist_id']
-    user_id = session.get('spotify_user_id')
-    return f"rate_playlist_{user_id}_{playlist_id}"
-
-def get_mobile_rate_playlist_cache_key():
-    playlist_id = request.view_args['playlist_id']
-    user_id = session.get('spotify_user_id')
-    return f"mobile_rate_playlist_{user_id}_{playlist_id}"
-
+            
 @app.route('/')
 def index():
     if session.get('spotify_token') and not session.get('logged_out'):
@@ -182,14 +173,10 @@ def callback():
     return redirect(url_for('index'))
 
 
-# Add a decorator to handle rate limits
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
-       retry=retry_if_exception_type(SpotifyException))
 def get_playlist_tracks(spotify_client, playlist_id):
     playlist = spotify_client.playlist(playlist_id)
     tracks = playlist['tracks']['items']
     return tracks
-
 
 def get_playlists_cache_key():
     user_id = session.get('spotify_user_id')
@@ -237,7 +224,27 @@ def playlists():
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
 
+# Add a decorator to handle rate limits
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+       retry=retry_if_exception_type(SpotifyException))
+def get_playlist_tracks_with_retry(sp, playlist_id):
+    return get_playlist_tracks(sp, playlist_id)
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+       retry=retry_if_exception_type(SpotifyException))
+def sp_track_with_retry(sp, track_id):
+    return sp.track(track_id)
+
+
+def get_rate_playlist_cache_key():
+    playlist_id = request.view_args['playlist_id']
+    user_id = session.get('spotify_user_id')
+    return f"rate_playlist_{user_id}_{playlist_id}"
+
+def get_mobile_rate_playlist_cache_key():
+    playlist_id = request.view_args['playlist_id']
+    user_id = session.get('spotify_user_id')
+    return f"mobile_rate_playlist_{user_id}_{playlist_id}"
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
@@ -250,14 +257,14 @@ def rate_playlist(playlist_id):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
 
-            tracks = get_playlist_tracks(sp, playlist_id)
+            tracks = get_playlist_tracks_with_retry(sp, playlist_id)
             unique_tracks = remove_duplicates(tracks)
 
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
 
             for track in unique_tracks:
-                track_info = sp.track(track['track']['id'])
+                track_info = sp_track_with_retry(sp, track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
             # Add the access token to the context
@@ -279,14 +286,14 @@ def mobile_rate_playlist(playlist_id):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
 
-            tracks = get_playlist_tracks(sp, playlist_id)
+            tracks = get_playlist_tracks_with_retry(sp, playlist_id)
             unique_tracks = remove_duplicates(tracks)
 
             if 'ratings' in session and playlist_id in session['ratings']:
                 return redirect(url_for('recommendation', playlist_id=playlist_id))
 
             for track in unique_tracks:
-                track_info = sp.track(track['track']['id'])
+                track_info = sp_track_with_retry(sp, track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
 
             # Add the access token to the context
