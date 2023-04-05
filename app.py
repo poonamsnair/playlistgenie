@@ -160,7 +160,7 @@ def index():
             session.clear()
 
     session.pop('logged_out', None)
-
+    refresh_access_token()
     state = generate_state()
     auth_url = f"https://accounts.spotify.com/authorize?client_id={SPOTIPY_CLIENT_ID}&response_type=code&redirect_uri={SPOTIPY_REDIRECT_URI}&scope={SCOPE}&state={state}&show_dialog=true&prompt=login&rand={random.random()}"
     session['auth_state'] = state
