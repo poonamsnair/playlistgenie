@@ -13,13 +13,13 @@
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
         {% for playlist in playlists %}
-                {% set unique_track_count = playlist.unique_track_count %}
+            {% set unique_track_count = playlist['unique_track_count'] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                 <div class="card playlist-card">
                     <div class="card-body">
                         <h5 class="card-title">
-                            {% if playlist_images[playlist['id']] %}
-                                <img src="{{ playlist_images[playlist['id']] }}" class="playlist-img mr-2" alt="{{ playlist['name'] }}">
+                            {% if playlist['images'] %}
+                                <img src="{{ playlist['images'][0]['url'] }}" class="playlist-img mr-2" alt="{{ playlist['name'] }}">
                             {% endif %}
                             {{ playlist['name'] }}
                         </h5>
@@ -38,10 +38,9 @@
                     </div>
                 </div>
             </div>
-            {% endif %} <!-- This is the missing endif tag -->
         {% endfor %}
     </div>
-    <nav aria-label="Page navigation example">
+   <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
             <li class="page-item page-item-back {% if offset == 0 %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('playlists', offset=previous_offset) }}">Back</a>

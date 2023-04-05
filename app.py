@@ -197,25 +197,6 @@ def get_playlist_tracks_cache_key(playlist_id):
 def get_playlist_tracks(sp, playlist_id):
     return sp.playlist_tracks(playlist_id)['items']
 
-def get_filtered_playlists(sp, offset, limit):
-    playlists = []
-    while len(playlists) < limit:
-        current_playlists = get_current_user_playlists(sp, limit, offset)
-        if not current_playlists['items']:
-            break
-        for playlist in current_playlists['items']:
-            tracks = get_playlist_tracks(sp, playlist['id'])
-            unique_tracks = remove_duplicates(tracks)
-            count = len(unique_tracks)
-            if count > 0:
-                playlist['unique_track_count'] = count
-                playlists.append(playlist)
-                if len(playlists) >= limit:
-                    break
-        offset += limit
-    return playlists, offset
-
-
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
@@ -225,37 +206,31 @@ def playlists():
     if not session.get('spotify_user_id'):
         session['spotify_user_id'] = sp.current_user()['id']
 
-    playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
 
-    if playlist_id is None:
-        playlists, next_offset = get_filtered_playlists(sp, offset, limit)
-        unique_track_counts = {}
-        playlist_images = {}
-        for playlist in playlists['items']:
-            tracks = get_playlist_tracks(sp, playlist['id'])
-            unique_tracks = remove_duplicates(tracks)
-            count = len(unique_tracks)
+    raw_playlists = get_current_user_playlists(sp, limit, offset)
 
-            # Get playlist image
-            if playlist['images']:
-                playlist_images[playlist['id']] = playlist['images'][0]['url']
-            else:
-                playlist_images[playlist['id']] = None
+    # Filter playlists with more than 0 unique tracks
+    filtered_playlists = []
+    for playlist in raw_playlists['items']:
+        tracks = get_playlist_tracks(sp, playlist['id'])
+        unique_tracks = remove_duplicates(tracks)
+        count = len(unique_tracks)
 
-            # Add the playlist to the dictionary only if it has at least one unique track
-            if count > 0:
-                unique_track_counts[playlist['id']] = count
+        if count > 0:
+            playlist['unique_track_count'] = count
+            playlist['playlist_image'] = playlist['images'][0]['url'] if playlist['images'] else None
+            filtered_playlists.append(playlist)
 
-        previous_offset = max(offset - limit, 0)
-        total_playlists = sum(1 for playlist in playlists['items'] if unique_track_counts.get(playlist['id']))
+    # Calculate pagination
+    total_playlists = len(filtered_playlists)
+    previous_offset = max(offset - limit, 0)
 
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
-    else:
-        if request.MOBILE:
-            return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
-        else:
-            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+    # Apply pagination
+    paginated_playlists = filtered_playlists[offset:offset + limit]
+
+    return render_template('playlist_list.html', playlists=paginated_playlists, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
+
 
 
 
