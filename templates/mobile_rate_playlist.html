@@ -68,6 +68,12 @@
         </div>
       `;
       initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
+
+      // Add a delay before updating the opacity
+      setTimeout(() => {
+        trackCard.style.opacity = 1;
+      }, 100);
+
       return trackCard;
     }
 
