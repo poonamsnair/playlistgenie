@@ -143,8 +143,11 @@ def get_mobile_rate_playlist_cache_key():
 
 @app.route('/')
 def index():
-    if session.get('spotify_token'):
+    if session.get('spotify_token') and not session.get('logged_out'):
         return redirect(url_for('playlists'))
+
+    # Clear the logged_out session variable, if it exists
+    session.pop('logged_out', None)
 
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
                                 redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
@@ -154,9 +157,13 @@ def index():
 
 @app.route('/logout')
 def logout():
+    # Clear the user's cache
+    cache_key = f"playlist_{session.get('spotify_user_id')}"
+    cache.delete(cache_key)    
     session.pop('spotify_token', None)
     session.pop('spotify_username', None)
     session.pop('spotify_user_id', None)
+    session['logged_out'] = True
     return redirect(url_for('index'))
 
 @app.route('/callback/')
