@@ -160,9 +160,9 @@ def index():
             session.clear()
 
     session.pop('logged_out', None)
-    refresh_access_token()
     state = generate_state()
-    auth_url = f"https://accounts.spotify.com/authorize?client_id={SPOTIPY_CLIENT_ID}&response_type=code&redirect_uri={SPOTIPY_REDIRECT_URI}&scope={SCOPE}&state={state}&show_dialog=true&prompt=login&rand={random.random()}"
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+    auth_url = auth_manager.get_authorize_url(state=state, show_dialog=True, prompt='login')
     session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
 
@@ -171,8 +171,7 @@ def logout():
     # Revoke the access token
     if session.get('spotify_token_info'):
         try:
-            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                        redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
             auth_manager.revoke_access_token(session['spotify_token_info']['access_token'])
         except Exception as e:
             print(f"Error revoking access token: {e}")
@@ -182,13 +181,11 @@ def logout():
 
     return redirect(url_for('index'))
 
-
 @app.route('/callback/')
 def callback():
     try:
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                    redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        token_info = auth_manager.get_access_token(request.args.get('code'))
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+        token_info = auth_manager.get_access_token(request.args.get('code'), state=request.args.get('state'))
 
         session.clear()
         session['spotify_token_info'] = token_info
@@ -200,10 +197,11 @@ def callback():
         session['user'] = {
             'playlist_count': 0
         }
-        return redirect(url_for('index'))
+        return redirect(url_for('playlists'))
     except Exception as e:
         print(f"Error in /callback: {e}")
         return redirect(url_for('index'))
+
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
