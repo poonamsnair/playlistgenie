@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <div class="content-container">
     <h1 class="page-title">Create New Playlist</h1>
     <form method="POST" action="{{ url_for('create_playlist', playlist_id=session['playlist_id']) }}">
@@ -9,11 +10,11 @@
             <input type="text" class="form-control custom-form-control" id="playlist_name" name="playlist_name" placeholder="Enter playlist name" required style="background-color: white; color: #333; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
         </div>
         <button type="submit" class="btn btn-playlist">Create Playlist</button>
-        {% if request.referrer and 'mobile_rate_playlist' in request.referrer %}
+        {% if request.referrer and 'mobile' in request.user_agent.platform %}
             <a href="{{ url_for('mobile_rate_playlist', playlist_id=playlist_id) }}" class="btn btn-primary">Back</a>
         {% else %}
             <a href="{{ url_for('rate_playlist', playlist_id=playlist_id) }}" class="btn btn-primary">Back</a>
         {% endif %}
     </form>
 </div>
-{% endblock %}
+{% endblock %} 
