@@ -375,10 +375,6 @@ def create_playlist(playlist_id):
     if not session.get('spotify_token'):
         return redirect(url_for('index'))
 
-    # Redirect to the index page if the user tries to access the create playlist page after generating a playlist
-    if 'rec_playlist_id' in session:
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
         playlist_name = request.form['playlist_name']
         if not playlist_name:
@@ -398,9 +394,14 @@ def create_playlist(playlist_id):
 
     # If the request is a GET and there's a rec_playlist_id in the session, delete the playlist and remove rec_playlist_id from the session
     if request.method == 'GET' and 'rec_playlist_id' in session:
-        delete_playlist(session['spotify_token'], session['rec_playlist_id'])
-        session.pop('rec_playlist_id', None)
-
+        sp = spotipy.Spotify(auth=session['spotify_token'])
+        rec_playlist_id = session['rec_playlist_id']
+        tracks = sp.playlist_tracks(rec_playlist_id, fields='total')['total']
+        if tracks == 0:
+            delete_playlist(session['spotify_token'], rec_playlist_id)
+            session.pop('rec_playlist_id', None)
+        return redirect(url_for('index'))
+    
     return render_template('create_playlist.html', playlist_id=playlist_id)
 
 
@@ -419,13 +420,19 @@ def recommendation(playlist_id, rec_playlist_id):
         # Clear cache for playlists and playlist tracks
         cache.delete(get_playlists_cache_key())
         cache.delete(get_playlist_tracks_cache_key(playlist_id))
+        
+        # Clear session
+        session.pop('rec_playlist_id', None)
+        
         return render_template("recommendation_progress.html", request_id=request_id)
     else:
         return redirect(url_for("index"))
 
+
     
 def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
+        session.pop('rec_playlist_id', None)
         delete_playlist(spotify_token, rec_playlist_id)
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth=spotify_token)
