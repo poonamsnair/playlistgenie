@@ -167,6 +167,40 @@ def index():
     session['auth_state'] = state
     return render_template('index.html', auth_url=auth_url)
 
+@app.route('/callback/')
+def callback():
+    try:
+        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+        state = request.args.get('state')
+        if state != session.get('auth_state'):
+            raise Exception('Authorization state mismatch')
+        
+        token_info = auth_manager.get_access_token(request.args.get('code'))
+
+        session.clear()
+        session['spotify_token_info'] = token_info
+        session['spotify_token'] = token_info.get('access_token')
+
+        sp = spotipy.Spotify(auth=session['spotify_token'])
+        user_data = sp.current_user()
+        print(f"User data in /callback: {user_data}")
+        user_id = user_data['id']
+        
+        session[f'{user_id}_spotify_token_info'] = token_info
+        session[f'{user_id}_spotify_token'] = token_info.get('access_token')
+        session[f'{user_id}_spotify_user_id'] = user_id
+        session[f'{user_id}_user'] = {
+            'playlist_count': 0
+        }
+        print(f"User data in /callback: {user_data}")
+        session['spotify_username'] = user_data['id']
+        session['user'] = {
+            'playlist_count': 0
+        }
+        return redirect(url_for('playlists'))
+    except Exception as e:
+        print(f"Error in /callback: {e}")
+        return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
@@ -183,32 +217,6 @@ def logout():
 
     return redirect(url_for('index'))
 
-@app.route('/callback/')
-def callback():
-    try:
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        state = request.args.get('state')
-        if state != session.get('auth_state'):
-            raise Exception('Authorization state mismatch')
-        
-        token_info = auth_manager.get_access_token(request.args.get('code'))
-
-        session.clear()
-        session['spotify_token_info'] = token_info
-        session['spotify_token'] = token_info.get('access_token')
-        sp = spotipy.Spotify(auth=session['spotify_token'])
-        user_data = sp.current_user()
-        print(f"User data in /callback: {user_data}")
-        session['spotify_username'] = user_data['id']
-        session['user'] = {
-            'playlist_count': 0
-        }
-        return redirect(url_for('playlists'))
-    except Exception as e:
-        print(f"Error in /callback: {e}")
-        return redirect(url_for('index'))
-
-
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
@@ -224,12 +232,13 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+    user_id = session['spotify_username']
+    sp = spotipy.Spotify(auth=session[f'{user_id}_spotify_token'])
     limit = 12
     api_limit = 50
 
-    if not session.get('spotify_user_id'):
-        session['spotify_user_id'] = sp.current_user()['id']
+    if not session.get(f'{user_id}_spotify_user_id'):
+        session[f'{user_id}_spotify_user_id'] = sp.current_user()['id']
 
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
