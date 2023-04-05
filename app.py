@@ -42,7 +42,6 @@ Mobility(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 
-
 SCOPE = 'user-library-read playlist-modify-public playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
@@ -248,7 +247,7 @@ def get_mobile_rate_playlist_cache_key():
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
+# @cache.cached(timeout=3600, key_prefix=get_rate_playlist_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -266,7 +265,7 @@ def rate_playlist(playlist_id):
             for track in unique_tracks:
                 track_info = sp_track_with_retry(sp, track['track']['id'])
                 track['spotify_uri'] = track_info['uri']
-
+                
             # Add the access token to the context
             return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
         except Exception as e:
@@ -277,7 +276,7 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-@cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
+# @cache.cached(timeout=3600, key_prefix=get_mobile_rate_playlist_cache_key)
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
