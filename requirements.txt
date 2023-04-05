@@ -11,3 +11,4 @@ flask_socketio
 greenlet
 tenacity
 flask_mobility
+flask_caching

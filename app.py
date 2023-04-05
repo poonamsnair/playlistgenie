@@ -31,6 +31,7 @@ from collections import OrderedDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
+from flask_caching import Cache
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -38,6 +39,7 @@ app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 
 
@@ -70,6 +72,9 @@ def timeout(seconds=30, error_message='Function call timed out'):
         return wraps(func)(wrapper)
 
     return decorator
+
+def get_user_cache_key():
+    return f"user:{session.get('spotify_user_id')}"
 
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
@@ -143,6 +148,9 @@ def index():
 
 @app.route('/logout')
 def logout():
+    cache_key = get_user_cache_key()
+    cache.delete(cache_key)
+    
     session.pop('spotify_token', None)
     session.pop('spotify_username', None)
     session.pop('spotify_user_id', None)
@@ -175,6 +183,8 @@ def get_playlist_tracks(spotify_client, playlist_id):
 
 @app.route('/playlists/')
 @require_spotify_token
+def get_user_cache_key():
+    return f"user:{session.get('spotify_user_id')}"
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 10
@@ -205,6 +215,8 @@ def playlists():
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
+def get_user_cache_key():
+    return f"user:{session.get('spotify_user_id')}"
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -233,6 +245,8 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
+def get_user_cache_key():
+    return f"user:{session.get('spotify_user_id')}"
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
