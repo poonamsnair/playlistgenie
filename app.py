@@ -204,33 +204,34 @@ def get_username(access_token):
 
 
 
-last_access_token = None
-
 @app.route('/callback/')
 def callback():
-    global last_access_token
     try:
         auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, show_dialog=True)
 
+        # Retrieve the state parameter from the session
         stored_state = session.get('spotify_auth_state')
 
+        # Verify that the state parameter from the response matches the one stored in the session
         if not request.args.get('state') == stored_state:
             return redirect(url_for('index'))
 
+        # Retrieve the access and refresh tokens for the newly logged-in user and store them in the session
         token_info = auth_manager.get_access_token(request.args.get('code'))
-        session['spotify_token'] = token_info['access_token']
-        session['spotify_refresh_token'] = token_info['refresh_token']
+        new_access_token = token_info['access_token']
+        new_refresh_token = token_info['refresh_token']
 
-        # Check if the new access token is the same as the last one
-        if session['spotify_token'] == last_access_token:
-            raise ValueError("Access token is not unique!")
+        # Retrieve the user's Spotify ID and store it in the session
+        new_user_id = get_username(new_access_token)
 
-        last_access_token = session['spotify_token']
+        if 'spotify_user_id' in session and session['spotify_user_id'] == new_user_id:
+            raise ValueError("User is not unique!")
 
-        user_id = get_username(session['spotify_token'])
-        session['spotify_user_id'] = user_id
+        session['spotify_token'] = new_access_token
+        session['spotify_refresh_token'] = new_refresh_token
+        session['spotify_user_id'] = new_user_id
 
-        print(f"New user {user_id} has logged in with access token {session['spotify_token']}.")
+        print(f"New user {new_user_id} has logged in with access token {new_access_token}.")
         return redirect(url_for('playlists'))
     except Exception as e:
         print(f"Error occurred during callback(): {e}")
