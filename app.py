@@ -178,9 +178,9 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 
 @app.route('/playlists/')
 def playlists():
-    if not session.get('spotify_token'):
+    if not session.get('token_info'):
         return redirect(url_for('index'))
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+    sp = get_spotify_client()
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
