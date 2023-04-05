@@ -206,7 +206,7 @@ def playlists():
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def rate_playlist(playlist_id):
-    if request.is_mobile:
+    if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
     
     if session.get('spotify_token'):
