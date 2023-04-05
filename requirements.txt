@@ -10,3 +10,4 @@ Stripe
 flask_socketio
 greenlet
 tenacity
+flask_mobility

@@ -30,13 +30,14 @@ from flask import request, abort
 from collections import OrderedDict
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from spotipy.exceptions import SpotifyException
-
+from flask_mobility import Mobility
 
 eventlet.monkey_patch()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
+Mobility(app)
 
 
 
@@ -194,14 +195,9 @@ def playlists():
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
 
-        if request.user_agent.is_mobile:
-            MOBILE = 'MOBILE'
-        else:
-            MOBILE = None
-
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, MOBILE=MOBILE)
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
     else:
-        if request.user_agent.is_mobile:
+        if request.MOBILE:
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
