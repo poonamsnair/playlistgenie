@@ -183,13 +183,17 @@ def playlists():
             unique_tracks = remove_duplicates(tracks)
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
-        total_playlists = playlists['total'] 
+        total_playlists = playlists['total']
+        if request.user_agent.platform in ['iphone', 'android']:
+            return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit)
     else:
         playlist = sp.playlist(playlist_id)
         tracks = sp.playlist_tracks(playlist_id)['items']
         unique_tracks = remove_duplicates(tracks)
         unique_track_count = len(unique_tracks)
+        if request.user_agent.platform in ['iphone', 'android']:
+            return render_template('mobile_rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
         return render_template('rate_playlists.html', playlist=playlist, tracks=unique_tracks, track_count=unique_track_count)
 
 

@@ -73,28 +73,14 @@
     }
 
     function loadMoreTracks() {
-      const tracksToLoad = tracks.slice(currentTrackIndex, currentTrackIndex + 10);
+      const tracksToLoad = tracks.slice(currentTrackIndex);
       tracksToLoad.forEach(track => {
         const trackCard = createTrackCard(track);
         tracksContainer.appendChild(trackCard);
       });
-      currentTrackIndex += 10;
     }
 
-    function isScrolledNearBottom() {
-      return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
-    }
+    loadMoreTracks(); 
 
-      function handleScroll() {
-        if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
-          loadMoreTracks();
-        }
-        loadVisibleAudios();
-      }
-
-      window.addEventListener('scroll', handleScroll);
-      loadMoreTracks();
-      loadVisibleAudios();
-
-    </script>
+  </script>
 {% endblock %}
