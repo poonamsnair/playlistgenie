@@ -419,11 +419,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
     tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-
     track_ids = list(ratings.keys())
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
     audio_features = sp.audio_features(track_ids)
+    socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
@@ -438,7 +438,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
         feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
         feature_dict['ratings'] = ratings[feature['id']]
         playlist_data.append(feature_dict)
-
+    
+    socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
     X = [[d[key] for key in feature_keys] for d in playlist_data]
@@ -455,6 +456,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
         'metric': ['euclidean', 'manhattan', 'minkowski']
     }
 
+    socketio.emit("knn_model_trained", {"request_id": request_id}, namespace='/recommendation')
     # Choose the appropriate cross-validator
     n_splits = 5
 
@@ -483,7 +485,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_
 
     if not rec_track_ids:
         emit_error_and_delete_playlist(request_id, "Error: No tracks found to be added")
-
+    socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
     for track_chunk in track_chunks:

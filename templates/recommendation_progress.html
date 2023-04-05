@@ -3,7 +3,7 @@
 {% block content %}
 <div class="content-container">
     <h1 class="page-title">Generating Recommendations</h1>
-    <p>Please wait while we generate recommendations for your playlist...</p>
+    <p id="status-message">Please wait while we generate recommendations for your playlist...</p>
     <div class="progress">
         <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
     </div>
@@ -22,9 +22,38 @@
         console.error('Error connecting to the server:', error);
     });
 
+    socket.on('playlist_data_processing', function(data) {
+        console.log('Received playlist_data_processing event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Processing your playlist data...";
+        }
+    });
+
+    socket.on('audio_features_retrieved', function(data) {
+        console.log('Received audio_features_retrieved event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Retrieving audio features...";
+        }
+    });
+
+    socket.on('knn_model_trained', function(data) {
+        console.log('Received knn_model_trained event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Training your model...";
+        }
+    });
+
+    socket.on('recommended_tracks_retrieved', function(data) {
+        console.log('Received recommended_tracks_retrieved event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Retrieving recommended tracks...";
+        }
+    });
+
     socket.on('recommendation_done', function(data) {
         console.log('Received recommendation_done event:', data);
         if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Recommendations generated successfully!";
             window.location.href = "https://open.spotify.com/playlist/" + data.rec_playlist_id;
         }
     });
@@ -47,3 +76,4 @@
     });
 </script>
 {% endblock %}
+
