@@ -164,38 +164,16 @@ def refresh_access_token(refresh_token):
     
 @app.route('/logout/')
 def logout():
-    print("Logging out user...")
-    logged_out_user = session.get('spotify_token')
-    if logged_out_user:
-        print(f"Logging out user {get_username(logged_out_user)}...")
-        session.pop('spotify_token', None)
-        session.pop('spotify_user_id', None)  # Add this line
-        print(f"User {logged_out_user} successfully logged out.")
-    else:
-        print("No user is currently logged in.")
+    session.clear()
     return redirect(url_for('index'))
-
 
 
 
 @app.route('/')
 def index():
-    try:
-        session.pop('spotify_token', None)
-        session.pop('spotify_user_id', None)
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, show_dialog=True)
-        state = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-
-        # Store the state parameter in the session
-        session['spotify_auth_state'] = state
-        print(f"Current session data: {session}")
-        auth_url = auth_manager.get_authorize_url(state=state)
-        print(f"New auth URL generated: {auth_url}")
-        return render_template('index.html', auth_url=auth_url)
-    except Exception as e:
-        print(f"Error occurred during index(): {e}")
-        raise
-
+    sp = get_spotify_client()
+    auth_url = sp.auth_manager.get_authorize_url()
+    return render_template('index.html', auth_url=auth_url)
 
 def get_username(access_token):
     try:
@@ -209,44 +187,13 @@ def get_username(access_token):
         raise
 
 
-
 @app.route('/callback/')
 def callback():
-    try:
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, show_dialog=True)
-
-        # Retrieve the state parameter from the session
-        stored_state = session.get('spotify_auth_state')
-
-        # Verify that the state parameter from the response matches the one stored in the session
-        if not request.args.get('state') == stored_state:
-            return redirect(url_for('index'))
-
-        # Retrieve the access and refresh tokens for the newly logged-in user and store them in the session
-        token_info = auth_manager.get_access_token(request.args.get('code'))
-        new_access_token = token_info['access_token']
-        new_refresh_token = token_info['refresh_token']
-
-        # Retrieve the user's Spotify ID and store it in the session
-        new_user_id = get_username(new_access_token)
-
-        if 'spotify_user_id' in session and session['spotify_user_id'] == new_user_id:
-            raise ValueError("User is not unique!")
-
-        session['spotify_token'] = new_access_token
-        session['spotify_refresh_token'] = new_refresh_token
-        session['spotify_user_id'] = new_user_id
-
-        print(f"New user {new_user_id} has logged in with access token {new_access_token}.")
-        
-        # Refresh access token for the newly logged-in user
-        refreshed_token = refresh_access_token(new_refresh_token)
-        session['spotify_token'] = refreshed_token
-
-        return redirect(url_for('playlists'))
-    except Exception as e:
-        print(f"Error occurred during callback(): {e}")
-        raise
+    sp = get_spotify_client()
+    code = request.args.get('code')
+    token_info = sp.auth_manager.get_access_token(code)
+    session['token_info'] = token_info
+    return redirect(url_for('playlists'))
 
 
 def get_playlist_tracks(spotify_client, playlist_id):
@@ -260,8 +207,9 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
     return playlists[start:end]
 
 @app.route('/playlists/')
-@require_spotify_token
 def playlists():
+    if not session.get('spotify_token'):
+        return redirect(url_for('index'))
     sp = spotipy.Spotify(auth=session['spotify_token'])
     logged_in_user = get_username(session['spotify_token'])
     print(f"Loading playlists for user {logged_in_user}...")
