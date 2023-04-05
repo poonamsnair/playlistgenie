@@ -37,7 +37,6 @@ from flask_session import Session
 import secrets
 import random
 import string
-import redis
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -45,8 +44,7 @@ app.secret_key = os.environ.get('SECRET_KEY')
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
-app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_REDIS'] = redis.from_url(os.environ.get('REDIS_URL'))
+app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
 
@@ -54,6 +52,7 @@ SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playli
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
+
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -146,95 +145,34 @@ def refresh_token_if_expired():
             session['spotify_token'] = token_info['access_token']   
 
             
-def generate_state():
-    state = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-    return state
-
-def require_spotify_token(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        user_id = session.get('spotify_username')
-
-        if user_id is None or f'{user_id}_spotify_token' not in session:
-            return redirect(url_for('index'))
-
-        token_info = session[f'{user_id}_spotify_token_info']
-        access_token = session[f'{user_id}_spotify_token']
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-
-        if auth_manager.is_token_expired(token_info):
-            try:
-                token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
-                access_token = token_info['access_token']
-                session[f'{user_id}_spotify_token_info'] = token_info
-                session[f'{user_id}_spotify_token'] = access_token
-            except Exception as e:
-                print(f"Error in refreshing access token: {e}")
-                return redirect(url_for('index'))
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
+@app.route('/logout/')
+def logout():
+    session.pop('spotify_token', None)
+    return redirect(url_for('index'))
 
 @app.route('/')
 def index():
-    if session.get('spotify_token') and not session.get('logged_out'):
-        try:
-            return redirect(url_for('playlists'))
-        except Exception as e:
-            print(f"Error in refreshing access token: {e}")
-            session.clear()
+    if session.get('spotify_token'):
+        return redirect(url_for('playlists'))
 
-    session.pop('logged_out', None)
-    state = generate_state()
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE,
-                                show_dialog=False)
-    auth_url = auth_manager.get_authorize_url(state=state)
-    session['auth_state'] = state
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
+                                client_secret=SPOTIPY_CLIENT_SECRET,
+                                redirect_uri=SPOTIPY_REDIRECT_URI,
+                                scope=SCOPE)
+    auth_url = auth_manager.get_authorize_url()
     return render_template('index.html', auth_url=auth_url)
+
 
 @app.route('/callback/')
 def callback():
-    try:
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        state = request.args.get('state')
-        if state != session.get('auth_state'):
-            raise Exception('Authorization state mismatch')
-        
-        token_info = auth_manager.get_access_token(request.args.get('code'))
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID,
+                                client_secret=SPOTIPY_CLIENT_SECRET,
+                                redirect_uri=SPOTIPY_REDIRECT_URI,
+                                scope=SCOPE)
 
-        session.clear()
-        sp = spotipy.Spotify(auth=token_info['access_token'])
-        user_data = sp.current_user()
-        print(f"User data in /callback: {user_data}")
-        user_id = user_data['id']
-
-        session['spotify_username'] = user_id
-        session[f'{user_id}_spotify_token_info'] = token_info
-        session[f'{user_id}_spotify_token'] = token_info.get('access_token')
-
-        return redirect(url_for('playlists'))
-    except Exception as e:
-        print(f"Error in /callback: {e}")
-        return redirect(url_for('index'))
-    
-@app.route('/logout')
-def logout():
-    # Revoke the access token
-    if session.get('spotify_token_info'):
-        try:
-            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-            auth_manager.revoke_access_token(session['spotify_token_info']['access_token'])
-        except Exception as e:
-            print(f"Error revoking access token: {e}")
-
-    # Clear all session variables
-    session.clear()
-
-    return redirect(url_for('index'))
-
+    token_info = auth_manager.get_access_token(request.args.get('code'))
+    session['spotify_token'] = token_info['access_token']
+    return redirect(url_for('playlists'))
 
 def get_playlist_tracks(spotify_client, playlist_id):
     playlist = spotify_client.playlist(playlist_id)
@@ -249,10 +187,12 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
-    user_id = session['spotify_username']
-    sp = spotipy.Spotify(auth=session[f'{user_id}_spotify_token'])
+    sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 12
     api_limit = 50
+
+    if not session.get('spotify_user_id'):
+        session['spotify_user_id'] = sp.current_user()['id']
 
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
