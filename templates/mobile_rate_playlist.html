@@ -60,9 +60,9 @@
           <h5 class="card-title">${track.track.name}</h5>
           <p class="card-text">Artist: ${track.track.artists[0].name}</p>
           <p class="card-text">Album: ${track.track.album.name}</p>
-          <div class="spotify-player">
-            <iframe data-src="https://open.spotify.com/embed/track/${track.track.id}" width="300" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
-          </div>
+          <audio controls>
+            <source src="${track.track.preview_url}" type="audio/mpeg">
+          </audio>
           <div class="rating-stars">
             ${[...Array(10)].map((_, i) => `
               <input type="radio" id="rating-${i + 1}-${track.track.id}" name="rating-${track.track.id}" value="${i + 1}" ${i === 4 ? 'checked' : ''}>
@@ -83,25 +83,16 @@
         });
         currentTrackIndex += 10;
       }
-
       function isScrolledNearBottom() {
         return (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200;
       }
 
-      function loadIframe(iframe) {
-         if (iframe.getAttribute('data-src') && !iframe.getAttribute('src')) {
-           iframe.onload = function() {
-             iframe.closest('.rate-songs-card').classList.add('loaded');
-        };
-           iframe.setAttribute('src', iframe.getAttribute('data-src'));
-      }
-    }
-      function loadVisibleIframes() {
-        const iframes = document.querySelectorAll('.spotify-player iframe');
-        iframes.forEach(iframe => {
-          const rect = iframe.getBoundingClientRect();
+      function loadVisibleAudios() {
+        const audios = document.querySelectorAll('audio');
+        audios.forEach(audio => {
+          const rect = audio.getBoundingClientRect();
           if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-            loadIframe(iframe);
+            audio.play();
           }
         });
       }
@@ -110,12 +101,12 @@
         if (isScrolledNearBottom() && currentTrackIndex < tracks.length) {
           loadMoreTracks();
         }
-        loadVisibleIframes();
+        loadVisibleAudios();
       }
 
       window.addEventListener('scroll', handleScroll);
       loadMoreTracks();
-      loadVisibleIframes();
+      loadVisibleAudios();
 
     </script>
     {% endblock %}

@@ -205,6 +205,9 @@ def get_playlist_tracks(spotify_client, playlist_id):
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
 def rate_playlist(playlist_id):
+    if request.user_agent.platform in ['android', 'iphone', 'ipad']:
+        return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
+    
     if session.get('spotify_token'):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
@@ -221,6 +224,31 @@ def rate_playlist(playlist_id):
 
             # Add the access token to the context
             return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
+        except Exception as e:
+            return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
+    else:
+        return redirect(url_for('index'))
+
+
+@app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
+@require_spotify_token
+def mobile_rate_playlist(playlist_id):
+    if session.get('spotify_token'):
+        try:
+            sp = spotipy.Spotify(auth=session['spotify_token'])
+
+            tracks = get_playlist_tracks(sp, playlist_id)
+            unique_tracks = remove_duplicates(tracks)
+
+            if 'ratings' in session and playlist_id in session['ratings']:
+                return redirect(url_for('recommendation', playlist_id=playlist_id))
+
+            for track in unique_tracks:
+                track_info = sp.track(track['track']['id'])
+                track['spotify_uri'] = track_info['uri']
+
+            # Add the access token to the context
+            return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
         except Exception as e:
             return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
     else:
