@@ -12,5 +12,5 @@ greenlet
 tenacity
 flask_mobility
 flask_caching
-fask_session
+flask_session
 typing
