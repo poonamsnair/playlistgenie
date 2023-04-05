@@ -70,7 +70,12 @@
         </div>
       </div>
     `;
-    initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));
+    initializeRatingHoverEffect(trackCard.querySelector('.rating-stars'));     
+        
+    setTimeout(() => {
+        trackCard.style.opacity = 1;
+    }, 100);
+  
     return trackCard;
   }
 
