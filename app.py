@@ -164,11 +164,17 @@ def index():
 
 @app.route('/logout')
 def logout():
-    # Clear session variables
-    session.pop('spotify_token', None)
-    session.pop('spotify_username', None)
-    session.pop('spotify_user_id', None)
-    session['logged_out'] = True
+    # Revoke the access token
+    if session.get('spotify_token_info'):
+        try:
+            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
+                                        redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+            auth_manager.revoke_access_token(session['spotify_token_info']['access_token'])
+        except Exception as e:
+            print(f"Error revoking access token: {e}")
+
+    # Clear all session variables
+    session.clear()
 
     return redirect(url_for('index'))
 
