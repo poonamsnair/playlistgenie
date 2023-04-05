@@ -163,6 +163,15 @@ def callback():
     return redirect(url_for('index'))
 
 
+# Add a decorator to handle rate limits
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
+       retry=retry_if_exception_type(SpotifyException))
+def get_playlist_tracks(spotify_client, playlist_id):
+    playlist = spotify_client.playlist(playlist_id)
+    tracks = playlist['tracks']['items']
+    return tracks
+
+
 @app.route('/playlists/')
 @require_spotify_token
 def playlists():
@@ -184,22 +193,16 @@ def playlists():
             unique_track_counts[playlist['id']] = len(unique_tracks)
         previous_offset = max(offset - limit, 0)
         total_playlists = playlists['total']
-        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit)
+
+        MOBILE = request.user_agent.platform in ['iphone', 'android']
+
+        return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, MOBILE=MOBILE)
     else:
         if request.user_agent.platform in ['iphone', 'android']:
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
 
-
-
-# Add a decorator to handle rate limits
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
-       retry=retry_if_exception_type(SpotifyException))
-def get_playlist_tracks(spotify_client, playlist_id):
-    playlist = spotify_client.playlist(playlist_id)
-    tracks = playlist['tracks']['items']
-    return tracks
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
