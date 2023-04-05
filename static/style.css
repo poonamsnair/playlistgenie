@@ -431,7 +431,7 @@ footer {
 
 .rating-stars {
   display: flex;
-  align-items: left;
+  justify-content:left !important; 
 }
 
 .rating-stars label {
