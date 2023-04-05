@@ -361,8 +361,6 @@ def create_playlist(playlist_id):
         rec_playlist_id = session['rec_playlist_id']
         tracks = sp.playlist_tracks(rec_playlist_id, fields='total')['total']
         if tracks == 0:
-            delete_playlist(session['spotify_token'], rec_playlist_id)
-            session.pop('rec_playlist_id', None)
             return redirect(url_for('index'))
 
     return render_template('create_playlist.html', playlist_id=playlist_id)
