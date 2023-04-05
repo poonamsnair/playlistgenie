@@ -183,8 +183,7 @@ def get_playlist_tracks(spotify_client, playlist_id):
 
 @app.route('/playlists/')
 @require_spotify_token
-def get_user_cache_key():
-    return f"user:{session.get('spotify_user_id')}"
+@cache.cached(timeout=0, key_prefix=get_user_cache_key)
 def playlists():
     sp = spotipy.Spotify(auth=session['spotify_token'])
     limit = 10
@@ -215,8 +214,7 @@ def playlists():
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-def get_user_cache_key():
-    return f"user:{session.get('spotify_user_id')}"
+@cache.cached(timeout=0, key_prefix=get_user_cache_key)
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -245,8 +243,7 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 @require_spotify_token
-def get_user_cache_key():
-    return f"user:{session.get('spotify_user_id')}"
+@cache.cached(timeout=0, key_prefix=get_user_cache_key)
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
