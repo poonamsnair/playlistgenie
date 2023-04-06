@@ -1,10 +1,22 @@
 import eventlet
 from flask import Flask, redirect, request, session, url_for, render_template, send_from_directory
+import secrets
+import random
+import string
+import pandas as pd
+import stripe
+import random
+import logging
+import os
+import numpy as np
+import uuid
+import threading
+import spotipy
+import base64
+import hashlib
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
-import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-import pandas as pd
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import LeaveOneOut, GroupShuffleSplit, StratifiedKFold
 from sklearn.model_selection import KFold
@@ -15,16 +27,9 @@ from functools import wraps
 from itertools import zip_longest
 from flask import flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import stripe
-import random
-import logging
-import os
-import numpy as np
 from sklearn.model_selection import train_test_split
 from math import ceil
-import threading
 from functools import wraps
-import uuid
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
@@ -34,9 +39,6 @@ from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
 from flask_session import Session
-import secrets
-import random
-import string
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from hashlib import sha256
 from os import urandom
@@ -149,28 +151,39 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.route('/')
+@app.route("/")
 def index():
     session.clear()
-    verifier, challenge = get_verifier_and_challenge()
-    session['verifier'] = verifier
-    sp = get_spotify_client()
-    auth_url = sp.auth_manager.get_authorize_url(
-        code_verifier=verifier,
-        code_challenge=challenge,
-        code_challenge_method='S256',
-        show_dialog=True
-    )
-    return render_template('index.html', auth_url=auth_url)
+    code_verifier = base64.urlsafe_b64encode(os.urandom(32)).decode("utf-8").rstrip("=")
+    session["code_verifier"] = code_verifier
+    code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip("=")
+    url = f"https://accounts.spotify.com/authorize?response_type=code&client_id={SPOTIPY_CLIENT_ID}&scope={SCOPE}&redirect_uri={SPOTIPY_REDIRECT_URI}&code_challenge_method=S256&code_challenge={code_challenge}&show_dialog=true"
+    return redirect(url)
 
 
-@app.route('/callback/')
+@app.route("/callback")
 def callback():
-    sp = get_spotify_client()
-    code = request.args.get('code')
-    token_info = sp.auth_manager.get_access_token(code, code_verifier=session['verifier'])
-    session['token_info'] = token_info
-    return redirect(url_for('playlists'))
+    code = request.args.get("code")
+    error = request.args.get("error")
+    if error:
+        return f"Error: {error}"
+    code_verifier = session.pop("code_verifier", None)
+    if not code_verifier:
+        return "Error: Invalid state"
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": SPOTIPY_REDIRECT_URI,
+        "client_id": SPOTIPY_CLIENT_ID,
+        "code_verifier": code_verifier,
+    }
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+    token_info = auth_manager.get_access_token(code, code_verifier=code_verifier)
+    session["spotify_token_info"] = token_info
+    session["spotify_token"] = token_info['access_token']
+    return redirect(url_for("playlists"))
+
 
 def get_playlist_tracks(spotify_client, playlist_id):
     playlist = spotify_client.playlist(playlist_id)
