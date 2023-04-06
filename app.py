@@ -94,7 +94,6 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
     return render_template('error.html', error_code=error_code), error_code
 
-
 sp_oauth = SpotifyOAuth(
     client_id=SPOTIPY_CLIENT_ID,
     client_secret=SPOTIPY_CLIENT_SECRET,
@@ -201,6 +200,8 @@ def playlists():
     if playlist_id is None:
         return render_template(
             'playlist_list.html',
+            playlists=paginated_playlists,
+            playlist_id=playlist_id,
             unique_track_counts=unique_track_counts,
             offset=offset,
             previous_offset=previous_offset,
