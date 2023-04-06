@@ -106,10 +106,10 @@ def callback():
     session['spotify_token'] = token_info['access_token']
 
     # redirect to playlist list page
-    return redirect('/playlist_list')
+    return redirect('/playlists')
 
 # playlist route (playlist_list.html)
-@app.route('/playlist_list')
+@app.route('/playlists/')
 def playlist_list():
     # check if user is logged in
     if 'spotify_token' not in session:
