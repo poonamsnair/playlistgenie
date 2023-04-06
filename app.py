@@ -130,21 +130,35 @@ def generate_pkce_code_challenge(code_verifier):
 
 @app.route("/logout")
 def logout():
-    session.clear()
+    """
+    This function logs out the user by clearing the session and revoking the Spotify access token.
+    """
+    if 'spotify_token' in session:
+        # revoke Spotify access token
+        sp_oauth._session.clear()
+        session.clear()
     return redirect(url_for("index"))
 
-# login route
+# index route
 @app.route('/')
 def index():
-    # check if user is already logged in
-    if 'spotify_token' in session:
-        return redirect('/playlist_list')
+    return render_template('index.html')
 
-    # get authorization url
+
+# login route
+@app.route('/login')
+def login():
+    sp_oauth = SpotifyOAuth(
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=redirect_uri,
+        scope=scope
+    )
     auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url+"&show_dialog=true")
 
-    # render index.html with authorization url
-    return render_template('index.html', auth_url=auth_url)
+
+
     
 # callback route
 @app.route('/callback')
