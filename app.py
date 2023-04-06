@@ -164,87 +164,51 @@ def remove_duplicates(tracks):
 
     return unique_tracks
 
-
 def paginate_playlists(playlists, limit, offset):
-    return playlists[offset:offset + limit]
+    return playlists[offset:offset+limit]
 
-
-def get_playlist_tracks(playlist_id, headers):
+def get_playlist_tracks(sp, playlist_id):
     tracks = []
-    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
-    while url:
-        response = requests.get(url, headers=headers).json()
-        tracks.extend(response["items"])
-        url = response["next"]
+    results = sp.playlist_tracks(playlist_id)
+    tracks.extend(results['items'])
+    while results['next']:
+        results = sp.next(results)
+        tracks.extend(results['items'])
     return tracks
 
-@app.route('/playlists/')
+
+
+@app.route('/playlists')
 def playlists():
-    if "access_token" not in session:
-        return redirect(url_for("index"))
+    # Get authorization from Spotify
+   # Get authorization from Spotify
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
+                                               client_secret=client_secret,
+                                               redirect_uri=redirect_uri,
+                                               scope='playlist-read-private'))
 
-    limit = 12
-    offset = int(request.args.get('offset', 0))
-    previous_offset = max(offset - limit, 0)
-
-    playlists_data = get_playlists_data(session["access_token"], offset, limit)
-    playlists = playlists_data["playlists"]
-    unique_track_counts = playlists_data["unique_track_counts"]
-    playlist_images = playlists_data["playlist_images"]
-    total_playlists = playlists_data["total_playlists"]
-
-    return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, limit=limit, request=request, total_playlists=total_playlists)
-
-def get_playlists_data(access_token, offset, limit):
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(access_token=access_token))
-    user_info = sp.current_user()
-    user_id = user_info["id"]
-    api_limit = 50
-
-    raw_playlists = []
-    api_offset = 0
-
-    while len(raw_playlists) < offset + limit:
-        playlists_batch = sp.user_playlists(user_id, limit=api_limit, offset=api_offset)
-
-        if 'items' not in playlists_batch:
-            break
-
-        if not playlists_batch['items']:
-            break
-
-        raw_playlists.extend(playlists_batch['items'])
-        api_offset += api_limit
-
+    # Get user's playlists
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    playlists = sp.current_user_playlists(limit=limit, offset=offset)
+    
+    # Get unique track counts and playlist images
     unique_track_counts = {}
     playlist_images = {}
-    filtered_playlists = []
-
-    for playlist in raw_playlists:
-        tracks = sp.playlist_tracks(playlist['id'])
-        unique_tracks = remove_duplicates(tracks)
-        count = len(unique_tracks)
-
+    for playlist in playlists['items']:
+        unique_track_counts[playlist['id']] = len(set(track['track']['id'] for track in sp.playlist_tracks(playlist['id'])['items']))
         if playlist['images']:
             playlist_images[playlist['id']] = playlist['images'][0]['url']
-        else:
-            playlist_images[playlist['id']] = None
-
-        if count > 0:
-            unique_track_counts[playlist['id']] = count
-            filtered_playlists.append(playlist)
-
-    paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
-    total_playlists = len(filtered_playlists)
-
-    return {
-        "playlists": paginated_playlists,
-        "unique_track_counts": unique_track_counts,
-        "playlist_images": playlist_images,
-        "offset": offset,
-        "total_playlists": total_playlists
-    }
-
+    
+    # Paginate playlists
+    paginated_playlists = paginate_playlists(playlists['items'], limit, offset)
+    
+    return jsonify(playlists=paginated_playlists,
+                   unique_track_counts=unique_track_counts,
+                   playlist_images=playlist_images,
+                   total_playlists=playlists['total'],
+                   offset=offset,
+                   limit=limit)
 
 
 # Add a decorator to handle rate limits
