@@ -217,7 +217,7 @@ def playlists():
     user_id = user_info["id"]
     display_name = user_info["display_name"]
     limit = 12
-    api_limit = 100
+    api_limit = 50
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
 
