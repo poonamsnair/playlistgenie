@@ -3,6 +3,7 @@ from flask import Flask, redirect, request, session, url_for, render_template, s
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
 import spotipy
+import spotipy.util as util
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
@@ -96,34 +97,10 @@ def handle_unhandled_exception(e):
     return render_template('error.html', error_code=error_code), error_code
 
 
-class SpotipyHandler(CacheHandler):
-
-    def __init__(self):
-        self.token_info = {}
-
-    def get_cached_token(self):
-        return self.token_info
-
-    def save_token_to_cache(self, token_info):
-        self.token_info = token_info
-
-# Initialize the custom cache handler
-cache_handler = SpotipyHandler()
-class SpotipyClient:
-    def __init__(self, client_id, client_secret, redirect_uri, scope):
-        self.sp_oauth = SpotifyOAuth(
-            client_id=client_id,
-            client_secret=client_secret,
-            redirect_uri=redirect_uri,
-            scope=scope,
-            cache_handler=cache_handler,
-            show_dialog=True
-        )
-
-    def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
-        token = token_info['access_token']
-        return spotipy.Spotify(auth=token)
-
+def get_token():
+    if 'token' not in session:
+        return None
+    return session['token']
 
 @app.route('/')
 def index():
@@ -131,30 +108,22 @@ def index():
 
 @app.route('/login')
 def login():
-    # Initialize a new SpotipyClient instance for each user
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    session['spotipy_token_info'] = spotipy_client.sp_oauth.get_cached_token()
-    auth_url = spotipy_client.sp_oauth.get_authorize_url()
-    print("Login URL generated: ", auth_url)
+    auth_url = util.oauth2_spotify.authorize_client(client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    auth_token = request.args.get('code')
-    token_info = spotipy_client.sp_oauth.get_access_token(code=auth_token)
-    session['spotipy_token_info'] = token_info
+    code = request.args.get('code')
+    token_info = util.oauth2_spotify.get_auth_response(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, code=code, redirect_uri=SPOTIPY_REDIRECT_URI)
+    access_token = token_info['access_token']
+    refresh_token = token_info['refresh_token']
     return redirect(url_for('playlists'))
-
-def get_spotify_client(token_info):
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    return spotipy_client.get_spotipy_client(token_info)
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
-        
+
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
     for track in tracks:
@@ -165,15 +134,15 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(token_info, playlist_id):
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    sp = spotipy_client.get_spotipy_client(token_info)
+    token = get_token()
+    sp = spotipy.Spotify(auth=token)
     user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(token_info, playlist_id):
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    sp = spotipy_client.get_spotipy_client(token_info)
+    token = get_token()
+    sp = spotipy.Spotify(auth=token)
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
@@ -194,8 +163,8 @@ def playlists():
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    sp = spotipy_client.get_spotipy_client(token_info)
+    token = get_token()
+    sp = spotipy.Spotify(auth=token)
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
 
     total_playlists = user_playlists['total']
