@@ -32,59 +32,60 @@
 </div>
 
 <script>
-  async function fetchPlaylists() {
-    const offset = {{ offset }};
-    const limit = {{ limit }};
-    const response = await fetch(`/api/playlists?offset=${offset}&limit=${limit}`);
-    const data = await response.json();
-    const playlists = data.playlists;
-    const uniqueTrackCounts = data.unique_track_counts;
-    const playlistImages = data.playlist_images;
+async function fetchPlaylists() {
+  const offset = {{ offset }};
+  const limit = {{ limit }};
+  const response = await fetch(`/api/playlists?offset=${offset}&limit=${limit}`);
+  const data = await response.json();
+  const playlists = data.playlists;
+  const uniqueTrackCounts = data.unique_track_counts;
+  const playlistImages = data.playlist_images;
 
-    const playlistsContainer = document.getElementById('playlists-container');
+  const playlistsContainer = document.getElementById('playlists-container');
 
-    for (const playlist of playlists) {
-      const uniqueTrackCount = uniqueTrackCounts[playlist.id];
-      const playlistImage = playlistImages[playlist.id];
+  for (const playlist of playlists) {
+    const uniqueTrackCount = uniqueTrackCounts[playlist.id];
+    const playlistImage = playlistImages[playlist.id];
 
-      const playlistCol = document.createElement('div');
-      playlistCol.className = 'col-lg-4 col-md-6 col-sm-12 mb-4';
+    const playlistCol = document.createElement('div');
+    playlistCol.className = 'col-lg-4 col-md-6 col-sm-12 mb-4';
 
-      const playlistCard = document.createElement('div');
-      playlistCard.className = 'card playlist-card';
+    const playlistCard = document.createElement('div');
+    playlistCard.className = 'card playlist-card';
 
-      const cardBody = document.createElement('div');
-      cardBody.className = 'card-body';
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body';
 
-      const cardTitle = document.createElement('h5');
-      cardTitle.className = 'card-title';
+    const cardTitle = document.createElement('h5');
+    cardTitle.className = 'card-title';
 
-      if (playlistImage) {
-        const img = document.createElement('img');
-        img.src = playlistImage;
-        img.className = 'playlist-img mr-2';
-        img.alt = playlist.name;
-        cardTitle.appendChild(img);
-      }
-
-      const playlistName = document.createTextNode(playlist.name);
-      cardTitle.appendChild(playlistName);
-      cardBody.appendChild(cardTitle);
-
-      const trackCountText = document.createElement('p');
-      trackCountText.className = 'card-text';
-      trackCountText.textContent = `Tracks: ${uniqueTrackCount}`;
-      cardBody.appendChild(trackCountText);
-
-      // Add the rest of the card elements, such as the "Rate Playlist" button, based on your original logic.
-
-      playlistCard.appendChild(cardBody);
-      playlistCol.appendChild(playlistCard);
-      playlistsContainer.appendChild(playlistCol);
+    if (playlistImage) {
+      const img = document.createElement('img');
+      img.src = playlistImage;
+      img.className = 'playlist-img mr-2';
+      img.alt = playlist.name;
+      cardTitle.appendChild(img);
     }
-  }
 
-  fetchPlaylists();
+    const playlistName = document.createTextNode(playlist.name);
+    cardTitle.appendChild(playlistName);
+    cardBody.appendChild(cardTitle);
+
+    const trackCountText = document.createElement('p');
+    trackCountText.className = 'card-text';
+    trackCountText.textContent = `Tracks: ${uniqueTrackCount}`;
+    cardBody.appendChild(trackCountText);
+
+    // Add the rest of the card elements, such as the "Rate Playlist" button, based on your original logic.
+
+    playlistCard.appendChild(cardBody);
+    playlistCol.appendChild(playlistCard);
+    playlistsContainer.appendChild(playlistCol);
+  }
+}
+
+fetchPlaylists();
+
 </script>
 
 {% endblock %}

@@ -210,66 +210,68 @@ def playlists():
     if "access_token" not in session:
         return redirect(url_for("index"))
 
-    # Get the current user's information
-    headers = {"Authorization": "Bearer " + session["access_token"]}
-    user_info = requests.get("https://api.spotify.com/v1/me", headers=headers).json()
-
-    user_id = user_info["id"]
-    display_name = user_info["display_name"]
     limit = 12
     api_limit = 50
-    playlist_id = request.args.get('playlist_id')
+    offset = int(request.args.get('offset', 0))
+    previous_offset = max(offset - limit, 0)
+
+    return render_template('playlist_list.html', offset=offset, previous_offset=previous_offset, limit=limit, request=request)
+
+@app.route('/api/playlists/')
+def api_playlists():
+    if "access_token" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+
+    headers = {"Authorization": "Bearer " + session["access_token"]}
+    user_info = requests.get("https://api.spotify.com/v1/me", headers=headers).json()
+    user_id = user_info["id"]
+    limit = 12
+    api_limit = 50
     offset = int(request.args.get('offset', 0))
 
-    if playlist_id is None:
-        raw_playlists = []
-        api_offset = 0
+    raw_playlists = []
+    api_offset = 0
 
     while len(raw_playlists) < offset + limit:
-        print(f"Retrieving batch of playlists from offset {api_offset}...")
         playlists_batch = requests.get(f"https://api.spotify.com/v1/users/{user_id}/playlists?limit={api_limit}&offset={api_offset}", headers=headers).json()
 
         if 'items' not in playlists_batch:
-            print("Unexpected API response:", playlists_batch)
             break
 
         if not playlists_batch['items']:
-            print("No more playlists to retrieve.")
             break
 
         raw_playlists.extend(playlists_batch['items'])
         api_offset += api_limit
 
+    unique_track_counts = {}
+    playlist_images = {}
+    filtered_playlists = []
 
-        unique_track_counts = {}
-        playlist_images = {}
-        filtered_playlists = []
+    for playlist in raw_playlists:
+        tracks = get_playlist_tracks(playlist['id'], headers)
+        unique_tracks = remove_duplicates(tracks)
+        count = len(unique_tracks)
 
-        for playlist in raw_playlists:
-            tracks = get_playlist_tracks(playlist['id'], headers)
-            unique_tracks = remove_duplicates(tracks)
-            count = len(unique_tracks)
-
-            # Get playlist image
-            if playlist['images']:
-                playlist_images[playlist['id']] = playlist['images'][0]['url']
-            else:
-                playlist_images[playlist['id']] = None
-
-            # Add the playlist to filtered_playlists if it has at least one unique track
-            if count > 0:
-                unique_track_counts[playlist['id']] = count
-                filtered_playlists.append(playlist)
-
-        paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
-        previous_offset = max(offset - limit, 0)
-        total_playlists = len(filtered_playlists)
-        return render_template('playlist_list.html', playlists=paginated_playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
-    else:
-        if request.MOBILE:
-            return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
+        if playlist['images']:
+            playlist_images[playlist['id']] = playlist['images'][0]['url']
         else:
-            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+            playlist_images[playlist['id']] = None
+
+        if count > 0:
+            unique_track_counts[playlist['id']] = count
+            filtered_playlists.append(playlist)
+
+    paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
+    total_playlists = len(filtered_playlists)
+
+    return jsonify({
+        "playlists": paginated_playlists,
+        "unique_track_counts": unique_track_counts,
+        "playlist_images": playlist_images,
+        "offset": offset,
+        "total_playlists": total_playlists
+    })
 
 
 
