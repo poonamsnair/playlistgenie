@@ -158,10 +158,7 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
 
 @app.route('/playlists/')
 def playlists():
-    token_info = session.get('token_info', None)
-    if token_info is None:
-        return redirect(url_for('index'))
-
+    token_info = session.get('token', None)
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
