@@ -193,10 +193,10 @@ def playlists():
     all_playlists = user_playlists['items']
 
     playlist_data = []
+    unique_track_counts = {}
     for playlist in all_playlists:
         tracks = get_playlist_tracks(token_info, playlist['id'])
         unique_tracks = remove_duplicates(tracks)
-        unique_track_counts = len(unique_tracks)
         if len(unique_tracks) >= 1:
             playlist_data.append({
                 'id': playlist['id'],
@@ -205,6 +205,8 @@ def playlists():
                 'unique_track_count': len(unique_tracks),
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
             })
+            unique_track_counts[playlist['id']] = len(unique_tracks)
+
     paginated_playlists = paginate_playlists(playlist_data, limit, offset)
     playlist_id = request.args.get('playlist_id', None)
 
