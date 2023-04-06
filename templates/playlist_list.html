@@ -1,134 +1,64 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-@media (max-width: 767px) {
-  .pagination .page-item:not(.page-item-back):not(.page-item-next) {
-    display: none;
-  }
-}
-</style>
-
-<div class="container content-container">
-  <h1 class="playlists-h1 mb-4">Your Playlists</h1>
-  <div class="row" id="playlists-container">
-    {% for playlist in playlists %}
-      {% set uniqueTrackCount = unique_track_counts[playlist.id] %}
-      {% set playlistImage = playlist_images[playlist.id] %}
-      <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-        <div class="card playlist-card">
+<div class="container">
+  <div class="row">
+    {% for playlist_card in playlist_cards %}
+      <div class="col-md-3">
+        <div class="card mb-4 box-shadow">
+          <img class="card-img-top" src="{{ playlist_card['image'] }}" alt="{{ playlist_card['title'] }}">
           <div class="card-body">
-            <h5 class="card-title">
-              {% if playlistImage %}
-                <img src="{{ playlistImage }}" class="playlist-img mr-2" alt="{{ playlist.name }}">
-              {% endif %}
-              {{ playlist.name }}
-            </h5>
-            <p class="card-text">Tracks: {{ uniqueTrackCount }}</p>
-            <!-- Add the rest of the card elements, such as the "Rate Playlist" button, based on your original logic. -->
+            <h5 class="card-title">{{ playlist_card['title'] }}</h5>
+            <p class="card-text">{{ playlist_card['unique_track_count'] }} unique tracks</p>
+            {% if not playlist_card['rate_disabled'] %}
+              <button type="button" class="btn btn-sm btn-outline-secondary">Rate Playlist</button>
+            {% else %}
+              <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Rate Playlist</button>
+            {% endif %}
           </div>
         </div>
       </div>
     {% endfor %}
   </div>
-  <nav aria-label="Page navigation example">
+  <nav aria-label="Playlist navigation">
     <ul class="pagination justify-content-center">
-      <li class="page-item page-item-back {% if offset == 0 %}disabled{% endif %}">
-        <a class="page-link" href="#" data-offset="{{ previous_offset }}">Back</a>
-      </li>
-      {% for i in range((total_playlists - 1) // limit + 1) %}
-        <li class="page-item {% if offset == i * limit %}active{% endif %}">
-          <a class="page-link" href="#" data-offset="{{ i * limit }}">{{ i + 1 }}</a>
+      {% if playlist_cards.has_prev %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('playlist_list', page=playlist_cards.prev_num) }}" tabindex="-1">Previous</a>
         </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">Previous</span>
+        </li>
+      {% endif %}
+      {% for num in playlist_cards.iter_pages() %}
+        {% if num %}
+          {% if num == playlist_cards.page %}
+            <li class="page-item active">
+              <span class="page-link">{{ num }}</span>
+            </li>
+          {% else %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('playlist_list', page=num) }}">{{ num }}</a>
+            </li>
+          {% endif %}
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        {% endif %}
       {% endfor %}
-      <li class="page-item page-item-next {% if offset + limit >= total_playlists %}disabled{% endif %}">
-        <a class="page-link" href="#" data-offset="{{ offset + limit }}">Next</a>
-      </li>
+
+      {% if playlist_cards.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('playlist_list', page=playlist_cards.next_num) }}">Next</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">Next</span>
+        </li>
+      {% endif %}
     </ul>
   </nav>
 </div>
-<script>
-$(document).ready(function() {
-  // Set up initial offset and limit values
-  let offset = {{ offset }};
-  const limit = {{ limit }};
-
-  // Function to fetch playlists and update the page
-  function fetchPlaylists(offset, limit) {
-    $.ajax({
-      url: '/playlists/',
-      data: { offset: offset, limit: limit },
-      success: function(data) {
-        // Extract playlist data from response
-        const playlists = data.playlists;
-        const uniqueTrackCounts = data.unique_track_counts;
-        const playlistImages = data.playlist_images;
-
-        // Update playlists container with new data
-        const playlistsContainer = $('#playlists-container');
-        playlistsContainer.empty();
-
-        for (const playlist of playlists) {
-          const uniqueTrackCount = uniqueTrackCounts[playlist.id];
-          const playlistImage = playlistImages[playlist.id];
-
-          const playlistCol = $('<div></div>').addClass('col-lg-4 col-md-6 col-sm-12 mb-4');
-
-          const playlistCard = $('<div></div>').addClass('card playlist-card');
-
-          const cardBody = $('<div></div>').addClass('card-body');
-
-          const cardTitle = $('<h5></h5>').addClass('card-title');
-
-          if (playlistImage) {
-            const img = $('<img>').attr('src', playlistImage).addClass('playlist-img mr-2').attr('alt', playlist.name);
-            cardTitle.append(img);
-          }
-
-          const playlistName = $('<span></span>').text(playlist.name);
-          cardTitle.append(playlistName);
-          cardBody.append(cardTitle);
-
-          const trackCountText = $('<p></p>').addClass('card-text').text(`Tracks: ${uniqueTrackCount}`);
-          cardBody.append(trackCountText);
-
-          playlistCard.append(cardBody);
-          playlistCol.append(playlistCard);
-          playlistsContainer.append(playlistCol);
-        }
-
-        // Update pagination links with new offset values
-        const previousLink = $('.page-item-back').children('a');
-        const nextLink = $('.page-item-next').children('a');
-        const currentPageLink = $(`.page-item:has(a[data-offset="${offset}"])`);
-        const prevOffset = Math.max(0, offset - limit);
-        const nextOffset = offset + limit;
-
-        previousLink.attr('data-offset', prevOffset);
-        previousLink.toggleClass('disabled', offset === 0);
-
-        currentPageLink.addClass('active');
-        currentPageLink.siblings('.active').removeClass('active');
-
-        nextLink.attr('data-offset', nextOffset);
-        nextLink.toggleClass('disabled', offset + limit >= data.total_playlists);
-      },
-      error: function(xhr, status, error) {
-        console.log('Error fetching playlists:', error);
-      }
-    });
-  }
-
-  // Initial fetch of playlists
-  fetchPlaylists(offset, limit);
-
-  // Set up pagination click listeners
-  $('.page-link').click(function(event) {
-    event.preventDefault();
-    offset = $(this).data('offset');
-    fetchPlaylists(offset, limit);
-  });
-});
-</script>
-  {% endblock %}
-
+{% endblock %}

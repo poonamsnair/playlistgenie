@@ -127,31 +127,90 @@ def generate_pkce_code_challenge(code_verifier):
 
 # Routes and functions
 
-@app.route("/")
-def index():
-    if "access_token" in session:
-        return redirect(url_for("playlists"))
-    else:
-        return render_template("index.html")
-
-@app.route("/login")
-def login():
-    auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("index"))
 
+# login route
+@app.route('/')
+def index():
+    # check if user is already logged in
+    if 'spotify_token' in session:
+        return redirect('/playlist_list')
 
-@app.route("/callback")
+    # get authorization url
+    auth_url = sp_oauth.get_authorize_url()
+
+    # render index.html with authorization url
+    return render_template('index.html', auth_url=auth_url)
+    
+# callback route
+@app.route('/callback')
 def callback():
-    code = request.args.get("code")
-    token_info = sp_oauth.get_access_token(code)
-    session["access_token"] = token_info["access_token"]
-    return redirect(url_for("playlists"))
+    # get authorization code from query parameters
+    code = request.args.get('code')
 
+    # exchange authorization code for access token
+    token_info = sp_oauth.get_access_token(code)
+
+    # store access token in session
+    session['spotify_token'] = token_info['access_token']
+
+    # redirect to playlist list page
+    return redirect('/playlist_list')
+
+# playlist route (playlist_list.html)
+@app.route('/playlist_list')
+def playlist_list():
+    # check if user is logged in
+    if 'spotify_token' not in session:
+        return redirect('/')
+
+    # get user's access token
+    access_token = session['spotify_token']
+
+    # create Spotify client
+    sp = spotipy.Spotify(auth=access_token)
+
+    # get user's playlists
+    playlists = sp.current_user_playlists()
+
+    # filter playlists with at least 1 track
+    playlists_with_tracks = [playlist for playlist in playlists['items'] if playlist['tracks']['total'] > 0]
+
+    # create list of playlist cards
+    playlist_cards = []
+    for playlist in playlists_with_tracks:
+        # get unique track count
+        unique_tracks = set()
+        tracks = sp.playlist_tracks(playlist['id'])
+        for track in tracks['items']:
+            unique_tracks.add(track['track']['id'])
+        unique_track_count = len(unique_tracks)
+
+        # disable rate playlist button if unique track count is less than 5 or more than 100
+        rate_disabled = unique_track_count < 5 or unique_track_count > 100
+
+        # create playlist card
+        playlist_card = {
+            'title': playlist['name'],
+            'unique_track_count': unique_track_count,
+            'image': playlist['images'][0]['url'],
+            'rate_disabled': rate_disabled
+        }
+        playlist_cards.append(playlist_card)
+
+    # paginate playlist cards
+    page = request.args.get('page', 1, type=int)
+    per_page = 12
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_playlist_cards = playlist_cards[start:end]
+
+    # render playlist_list.html with paginated playlist cards
+    return render_template('playlist_list.html', playlist_cards=paginated_playlist_cards)
 
 def remove_duplicates(tracks):
     unique_tracks = []
@@ -175,49 +234,6 @@ def get_playlist_tracks(sp, playlist_id):
         results = sp.next(results)
         tracks.extend(results['items'])
     return tracks
-
-
-@app.route('/playlists/')
-def playlists():
-    # Get authorization from Spotify
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
-                                               client_secret=client_secret,
-                                               redirect_uri=redirect_uri,
-                                               scope='playlist-read-private'))
-
-    # Get user's playlists
-    offset = request.args.get('offset', 0, type=int)
-    limit = request.args.get('limit', 20, type=int)
-    playlists = sp.current_user_playlists(limit=limit, offset=offset)
-
-    # Get all playlist tracks and images at once
-    playlist_ids = [playlist['id'] for playlist in playlists['items']]
-    playlist_tracks = {}
-    playlist_images = {}
-    for i in range(0, len(playlist_ids), 50):
-        batch_ids = playlist_ids[i:i+50]
-        batch_tracks = sp.playlist_tracks(batch_ids)
-        for j, playlist_id in enumerate(batch_ids):
-            playlist_tracks[playlist_id] = batch_tracks['items'][j]['track']['id']
-        batch_images = sp.playlist_cover_image(batch_ids)
-        for j, playlist_id in enumerate(batch_ids):
-            if batch_images[j]:
-                playlist_images[playlist_id] = batch_images[j]['url']
-
-    # Generate unique track counts
-    unique_tracks = remove_duplicates(playlist_tracks)
-    unique_track_counts = len(unique_tracks)
-
-    
-    # Paginate playlists
-    paginated_playlists = paginate_playlists(playlists['items'], limit, offset)
-    
-    return jsonify(playlists=paginated_playlists,
-                   unique_track_counts=unique_track_counts,
-                   playlist_images=playlist_images,
-                   total_playlists=playlists['total'],
-                   offset=offset,
-                   limit=limit)
 
 
 # Add a decorator to handle rate limits
