@@ -188,7 +188,9 @@ def playlists():
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
 
-    api_data = api_playlists().get_json()
+    api_response, status_code = api_playlists()
+    api_data = api_response.get_json()
+
     total_playlists = api_data["total_playlists"]
 
     return render_template('playlist_list.html', offset=offset, previous_offset=previous_offset, limit=limit, request=request, total_playlists=total_playlists)
