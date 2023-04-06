@@ -143,9 +143,11 @@ def logout():
 
 @app.route('/')
 def index():
+    session.clear()  # reset the session data
     sp = get_spotify_client()
     auth_url = sp.auth_manager.get_authorize_url()
     return render_template('index.html', auth_url=auth_url)
+
 
 
 @app.route('/callback/')
@@ -154,7 +156,9 @@ def callback():
     code = request.args.get('code')
     token_info = sp.auth_manager.get_access_token(code)
     session['token_info'] = token_info
-    return redirect(url_for('playlists'))
+    auth_url = sp.auth_manager.get_authorize_url()  
+    return redirect(url_for('playlists', auth_url=auth_url))
+
 
 def get_playlist_tracks(spotify_client, playlist_id):
     playlist = spotify_client.playlist(playlist_id)
