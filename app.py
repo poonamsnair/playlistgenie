@@ -142,8 +142,7 @@ def callback():
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
-@staticmethod             
+        
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
     for track in tracks:
