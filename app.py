@@ -37,6 +37,9 @@ from flask_session import Session
 import secrets
 import random
 import string
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+from hashlib import sha256
+from os import urandom
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -129,6 +132,12 @@ def add_no_cache_headers(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
     return response
+
+def get_verifier_and_challenge():
+    """Generate a code verifier and its SHA256 challenge."""
+    verifier = urlsafe_b64encode(urandom(32)).decode('utf-8')
+    challenge = urlsafe_b64encode(sha256(verifier.encode('utf-8')).digest()).decode('utf-8')
+    return verifier, challenge
     
 def get_spotify_client():
     auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
@@ -140,25 +149,28 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-
 @app.route('/')
 def index():
-    session.clear()  # reset the session data
+    session.clear()
+    verifier, challenge = get_verifier_and_challenge()
+    session['verifier'] = verifier
     sp = get_spotify_client()
-    auth_url = sp.auth_manager.get_authorize_url()
+    auth_url = sp.auth_manager.get_authorize_url(
+        code_verifier=verifier,
+        code_challenge=challenge,
+        code_challenge_method='S256',
+        show_dialog=True
+    )
     return render_template('index.html', auth_url=auth_url)
-
 
 
 @app.route('/callback/')
 def callback():
     sp = get_spotify_client()
     code = request.args.get('code')
-    token_info = sp.auth_manager.get_access_token(code)
+    token_info = sp.auth_manager.get_access_token(code, code_verifier=session['verifier'])
     session['token_info'] = token_info
-    auth_url = sp.auth_manager.get_authorize_url()  
-    return redirect(url_for('playlists', auth_url=auth_url))
-
+    return redirect(url_for('playlists'))
 
 def get_playlist_tracks(spotify_client, playlist_id):
     playlist = spotify_client.playlist(playlist_id)
