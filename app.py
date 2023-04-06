@@ -149,8 +149,9 @@ def logout():
 def callback():
     code = request.args.get("code")
     token_info = sp_oauth.get_access_token(code)
-    session["token_info"] = token_info
+    session["access_token"] = token_info["access_token"]
     return redirect(url_for("playlists"))
+
 
 def remove_duplicates(tracks):
     unique_tracks = []
