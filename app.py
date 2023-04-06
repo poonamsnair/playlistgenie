@@ -200,10 +200,11 @@ def playlists():
         if len(unique_tracks) >= 1:
             playlist_data.append({
                 'id': playlist['id'],
+                'name': playlist['name'],  # Add the playlist name
+                'images': playlist['images'],  # Add the playlist images
                 'count': len(unique_tracks),
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
             })
-
     paginated_playlists = paginate_playlists(playlist_data, limit, offset)
     playlist_id = request.args.get('playlist_id', None)
 
