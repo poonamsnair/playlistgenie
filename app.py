@@ -32,6 +32,7 @@ from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
 from spotipy.cache_handler import CacheHandler
+from flask_session import Session
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -51,6 +52,17 @@ socketio = SocketIO(app)
 # Add mobile support to the Flask app using Flask-Mobility extension
 Mobility(app)
 
+app.config['SECRET_KEY'] = os.urandom(64)
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_FILE_DIR'] = './.flask_session/'
+Session(app)
+
+caches_folder = './.spotify_caches/'
+if not os.path.exists(caches_folder):
+    os.makedirs(caches_folder)
+
+def session_cache_path():
+    return caches_folder + session.get('uuid')
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
@@ -106,28 +118,42 @@ def get_token():
 def index():
     return render_template('index.html')
 
-@app.route('/login')
-def login():
-    username = request.args.get('username')
-    token = util.prompt_for_user_token(username, SCOPE, client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
-    session['token'] = token
-    return redirect(url_for('playlists'))
+@app.route('/')
+def index():
+    if not session.get('uuid'):
+        # Step 1. Visitor is unknown, give random ID
+        session['uuid'] = SPOTIPY_CLIENT_ID
 
-@app.route('/callback')
-def callback():
-    sp_oauth = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
-    code = request.args.get('code')
-    token_info = sp_oauth.get_access_token(code)
-    access_token = token_info['access_token']
-    refresh_token = token_info['refresh_token']
-    session['token'] = access_token
-    session['refresh_token'] = refresh_token
-    return redirect(url_for('playlists'))
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
+                                               cache_path=session_cache_path(),
+                                               show_dialog=True)
+
+    if request.args.get("code"):
+        # Step 3. Being redirected from Spotify auth page
+        auth_manager.get_access_token(request.args.get("code"))
+        return redirect('/playlists')
+
+    if not auth_manager.get_cached_token():
+        # Step 2. Display sign in link when no token
+        auth_url = auth_manager.get_authorize_url()
+        return f'<h2><a href="{auth_url}">Sign in</a></h2>'
+
+    # Step 4. Signed in, redirect to playlists
+    return redirect('/playlists')
+
+
 
 @app.route('/logout')
 def logout():
+    os.remove(session_cache_path())
     session.clear()
-    return redirect(url_for('index'))
+    try:
+        # Remove the CACHE file (.cache-test) so that a new user can authorize.
+        os.remove(session_cache_path())
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
+    return redirect('/')
 
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
@@ -138,16 +164,18 @@ def remove_duplicates(tracks):
     return list(unique_tracks.values())
 
 
-def delete_playlist(token_info, playlist_id):
-    token = get_token()
-    sp = spotipy.Spotify(auth=token)
+def delete_playlist(playlist_id):
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
-def get_playlist_tracks(token_info, playlist_id):
-    token = get_token()
-    sp = spotipy.Spotify(auth=token)
+def get_playlist_tracks(playlist_id):
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
@@ -159,14 +187,16 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
 
 @app.route('/playlists/')
 def playlists():
-    token_info = session.get('token')
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    token = get_token()
-    sp = spotipy.Spotify(auth=token)
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
 
     total_playlists = user_playlists['total']
@@ -175,7 +205,7 @@ def playlists():
     playlist_data = []
     unique_track_counts = {}
     for playlist in all_playlists:
-        tracks = get_playlist_tracks(token_info, playlist['id'])
+        tracks = get_playlist_tracks(playlist['id'])
         unique_tracks = remove_duplicates(tracks)
         if len(unique_tracks) >= 1:
             playlist_data.append({
