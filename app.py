@@ -131,7 +131,7 @@ def add_no_cache_headers(response):
     return response
     
 def get_spotify_client():
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
+    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
@@ -178,11 +178,9 @@ def remove_duplicates(tracks):
 
 @app.route('/playlists/')
 def playlists():
-    sp = get_spotify_client()
-    if 'code' not in request.args:
+    if not session.get('token_info'):
         return redirect(url_for('index'))
-    code = request.args['code']
-    token_info = sp.auth_manager.get_access_token(code)
+    sp = get_spotify_client()
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
