@@ -128,10 +128,15 @@ def login():
 
 @app.route('/callback')
 def callback():
+    error = request.args.get('error', None)
+    if error:
+        return render_template('error.html', error=error)
+
     code = request.args.get('code')
     token_info = spotipy_client.sp_oauth.get_access_token(code)
     session['token_info'] = token_info
     return redirect(url_for('playlists'))
+
 
 @app.route('/logout')
 def logout():
@@ -171,7 +176,7 @@ def playlists():
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
-    sp = spotipy_client.get_client(token_info)
+    sp = spotipy_client.get_spotipy_client(token_info)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
