@@ -211,11 +211,14 @@ def playlists():
         return redirect(url_for("index"))
 
     limit = 12
-    api_limit = 50
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
 
-    return render_template('playlist_list.html', offset=offset, previous_offset=previous_offset, limit=limit, request=request)
+    api_data = api_playlists().get_json()
+    total_playlists = api_data["total_playlists"]
+
+    return render_template('playlist_list.html', offset=offset, previous_offset=previous_offset, limit=limit, request=request, total_playlists=total_playlists)
+
 
 @app.route('/api/playlists/')
 def api_playlists():
