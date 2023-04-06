@@ -119,13 +119,10 @@ class SpotipyClient:
             cache_handler=cache_handler,
             show_dialog=True
         )
-        self.spotify = None
 
     def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
-        if self.spotify is None:
-            token = token_info['access_token']
-            self.spotify = spotipy.Spotify(auth=token)
-        return self.spotify
+        token = token_info['access_token']
+        self.spotify = spotipy.Spotify(auth=token)
 
 
 @app.route('/')
