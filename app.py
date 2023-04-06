@@ -124,7 +124,6 @@ class SpotipyClient:
         token = token_info['access_token']
         self.spotify = spotipy.Spotify(auth=token)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -141,7 +140,7 @@ def login():
 @app.route('/callback')
 def callback():
     # Get the SpotipyClient instance from the session
-    spotipy_client = session.get('spotipy_client')
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
     if not spotipy_client:
         return render_template('error.html', error='An error occurred. Please try logging in again.')
 
@@ -177,13 +176,13 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(token_info, playlist_id):
-    spotipy_client = session.get('spotipy_client')
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
     sp = spotipy_client.get_spotipy_client(token_info)
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(token_info, playlist_id):
-    spotipy_client = session.get('spotipy_client')
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
     sp = spotipy_client.get_spotipy_client(token_info)
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
@@ -205,7 +204,7 @@ def playlists():
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    spotipy_client = session.get('spotipy_client')
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
     sp = spotipy_client.get_spotipy_client(token_info)
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
 
