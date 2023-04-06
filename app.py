@@ -187,7 +187,7 @@ def playlists():
 
     playlist_data = []
     for playlist in all_playlists:
-        tracks = spotipy_client.get_playlist_tracks(token_info, playlist['id'])
+        tracks = get_playlist_tracks(token_info, playlist['id'])
         unique_tracks = remove_duplicates(tracks)
         if len(unique_tracks) >= 1:
             playlist_data.append({
