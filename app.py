@@ -225,14 +225,21 @@ def playlists():
         raw_playlists = []
         api_offset = 0
 
-        while len(raw_playlists) < offset + limit:
-            print(f"Retrieving batch of playlists from offset {api_offset}...")
-            playlists_batch = requests.get(f"https://api.spotify.com/v1/users/{user_id}/playlists?limit={api_limit}&offset={api_offset}", headers=headers).json()
-            if not playlists_batch['items']:
-                print("No more playlists to retrieve.")
-                break
-            raw_playlists.extend(playlists_batch['items'])
-            api_offset += api_limit
+    while len(raw_playlists) < offset + limit:
+        print(f"Retrieving batch of playlists from offset {api_offset}...")
+        playlists_batch = requests.get(f"https://api.spotify.com/v1/users/{user_id}/playlists?limit={api_limit}&offset={api_offset}", headers=headers).json()
+
+        if 'items' not in playlists_batch:
+            print("Unexpected API response:", playlists_batch)
+            break
+
+        if not playlists_batch['items']:
+            print("No more playlists to retrieve.")
+            break
+
+        raw_playlists.extend(playlists_batch['items'])
+        api_offset += api_limit
+
 
         unique_track_counts = {}
         playlist_images = {}
