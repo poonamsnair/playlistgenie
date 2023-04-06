@@ -30,6 +30,7 @@ from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
+from spotipy.cache_handler import CacheHandler
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -94,20 +95,29 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
     return render_template('error.html', error_code=error_code), error_code
 
-sp_oauth = SpotifyOAuth(
-    client_id=SPOTIPY_CLIENT_ID,
-    client_secret=SPOTIPY_CLIENT_SECRET,
-    redirect_uri=SPOTIPY_REDIRECT_URI,
-    scope=SCOPE
-)
 
+class SpotipyHandler(CacheHandler):
+
+    def __init__(self):
+        self.token_info = {}
+
+    def get_cached_token(self):
+        return self.token_info
+
+    def save_token_to_cache(self, token_info):
+        self.token_info = token_info
+
+# Initialize the custom cache handler
+cache_handler = SpotipyHandler()
 class SpotipyClient:
     def __init__(self, client_id, client_secret, redirect_uri, scope):
         self.sp_oauth = SpotifyOAuth(
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scope=scope
+            scope=scope,
+            cache_handler=cache_handler,
+            show_dialog=True
         )
 
     def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
