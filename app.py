@@ -108,15 +108,19 @@ def index():
 
 @app.route('/login')
 def login():
-    auth_url = util.oauth2_spotify.authorize_client(client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+    sp_oauth = SpotifyOAuth(client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
+    auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
+    sp_oauth = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
     code = request.args.get('code')
-    token_info = util.oauth2_spotify.get_auth_response(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, code=code, redirect_uri=SPOTIPY_REDIRECT_URI)
+    token_info = sp_oauth.get_access_token(code)
     access_token = token_info['access_token']
     refresh_token = token_info['refresh_token']
+    session['token'] = access_token
+    session['refresh_token'] = refresh_token
     return redirect(url_for('playlists'))
 
 @app.route('/logout')
