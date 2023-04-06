@@ -56,12 +56,18 @@ Mobility(app)
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-
-SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
 # Set your Spotify client ID and redirect URI
 client_id = os.environ.get("SPOTIFY_CLIENT_ID")
 client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET")
 redirect_uri = os.environ.get("SPOTIFY_REDIRECT_URI")
+scope = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
+
+sp_oauth = SpotifyOAuth(
+    client_id=client_id,
+    client_secret=client_secret,
+    redirect_uri=redirect_uri,
+    scope=scope
+)
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -130,53 +136,20 @@ def index():
 
 @app.route("/login")
 def login():
-    code_verifier = generate_pkce_code_verifier()
-    code_challenge = generate_pkce_code_challenge(code_verifier)
-    session["code_verifier"] = code_verifier
-
-    auth_params = {
-        "response_type": "code",
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "scope": "user-read-private playlist-read-private",
-        "code_challenge_method": "S256",
-        "code_challenge": code_challenge,
-    }
-
-    # Redirect the user to the Spotify authorization endpoint
-    return redirect("https://accounts.spotify.com/authorize?" + urlencode(auth_params))
+    auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url)
 
 @app.route("/logout")
 def logout():
-    session.pop("access_token", None)
-    session.pop("refresh_token", None)
-    session.pop("code_verifier", None)
+    session.clear()
     return redirect(url_for("index"))
 
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-    error = request.args.get("error")
-
-    if error:
-        # Handle errors here
-        return "Error: " + error
-
-    code_verifier = session["code_verifier"]
-
-    # Exchange the authorization code for an access token and refresh token
-    token_response = requests.post("https://accounts.spotify.com/api/token", data={
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "client_id": client_id,
-        "code_verifier": code_verifier,
-    }).json()
-
-    session["access_token"] = token_response["access_token"]
-    session["refresh_token"] = token_response["refresh_token"]
-
+    token_info = sp_oauth.get_access_token(code)
+    session["token_info"] = token_info
     return redirect(url_for("playlists"))
 
 def remove_duplicates(tracks):
@@ -222,11 +195,13 @@ def playlists():
 
 @app.route('/api/playlists/')
 def api_playlists():
-    if "access_token" not in session:
+    if "token_info" not in session:
         return jsonify({"error": "Not logged in"}), 401
 
-    headers = {"Authorization": "Bearer " + session["access_token"]}
-    user_info = requests.get("https://api.spotify.com/v1/me", headers=headers).json()
+    access_token = session["token_info"]["access_token"]
+    sp = spotipy.Spotify(auth=access_token)
+
+    user_info = sp.current_user()
     user_id = user_info["id"]
     limit = 12
     api_limit = 50
@@ -236,7 +211,7 @@ def api_playlists():
     api_offset = 0
 
     while len(raw_playlists) < offset + limit:
-        playlists_batch = requests.get(f"https://api.spotify.com/v1/users/{user_id}/playlists?limit={api_limit}&offset={api_offset}", headers=headers).json()
+        playlists_batch = sp.user_playlists(user_id, limit=api_limit, offset=api_offset)
 
         if 'items' not in playlists_batch:
             break
@@ -252,7 +227,7 @@ def api_playlists():
     filtered_playlists = []
 
     for playlist in raw_playlists:
-        tracks = get_playlist_tracks(playlist['id'], headers)
+        tracks = sp.playlist_tracks(playlist['id'])
         unique_tracks = remove_duplicates(tracks)
         count = len(unique_tracks)
 
