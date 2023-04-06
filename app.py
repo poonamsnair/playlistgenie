@@ -119,12 +119,14 @@ class SpotipyClient:
             cache_handler=cache_handler,
             show_dialog=True
         )
+        self.spotify = None
 
     def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
-        token = token_info['access_token']
-        return spotipy.Spotify(auth=token)
+        if self.spotify is None:
+            token = token_info['access_token']
+            self.spotify = spotipy.Spotify(auth=token)
+        return self.spotify
 
-spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
 
 @app.route('/')
 def index():
@@ -132,12 +134,20 @@ def index():
 
 @app.route('/login')
 def login():
+    # Initialize a new SpotipyClient instance for each user
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
+    session['spotipy_client'] = spotipy_client
     auth_url = spotipy_client.sp_oauth.get_authorize_url()
     print("Login URL generated: ", auth_url)
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
+    # Get the SpotipyClient instance from the session
+    spotipy_client = session.get('spotipy_client')
+    if not spotipy_client:
+        return render_template('error.html', error='An error occurred. Please try logging in again.')
+
     error = request.args.get('error', None)
     if error:
         print("Error in callback: ", error)
@@ -147,13 +157,15 @@ def callback():
     token_info = spotipy_client.sp_oauth.get_access_token(code)
     if token_info:
         print("Token info received successfully")
+        sp = spotipy_client.get_spotipy_client(token_info)
+        user = sp.me()
+        session['sp'] = sp
+        session['token_info'] = token_info
+        print("Logged in as: ", user['display_name'])
+        return redirect(url_for('playlists'))
     else:
         print("Failed to retrieve token info")
-    session['token_info'] = token_info
-    sp = spotipy_client.get_spotipy_client(token_info)
-    user = sp.me()
-    print("Logged in as: ", user['display_name'])
-    return redirect(url_for('playlists'))
+        return render_template('error.html', error='Failed to retrieve token info')
 
 
 @app.route('/logout')
@@ -169,14 +181,26 @@ def remove_duplicates(tracks):
             unique_tracks[track_id] = track
     return list(unique_tracks.values())
 
+@app.route('/token_info')
+def token_info():
+    token_info = session.get('token_info')
+    if token_info:
+        return f'Token info: {token_info}'
+    else:
+        return 'No token info found in session'
+
 def delete_playlist(token_info, playlist_id):
-    spotify = spotipy_client.get_spotipy_client(token_info)
-    user_id = spotify.me()['id']
-    spotify.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
+    token_info = session.get('token_info', None)
+    spotipy_client = session.get('spotipy_client')
+    sp = spotipy_client.get_spotipy_client(token_info)
+    user_id = sp.me()['id']
+    sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(token_info, playlist_id):
-    spotify = spotipy_client.get_spotipy_client(token_info)
-    playlist = spotify.playlist(playlist_id)
+    token_info = session.get('token_info', None)
+    spotipy_client = session.get('spotipy_client')
+    sp = spotipy_client.get_spotipy_client(token_info)
+    playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
 
@@ -190,13 +214,14 @@ def playlists():
     token_info = session.get('token_info', None)
     if token_info is None:
         return redirect(url_for('index'))
-
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
-    sp = spotipy_client.get_spotipy_client(token_info)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
+    token_info = session.get('token_info', None)
+    spotipy_client = session.get('spotipy_client')
+    sp = spotipy_client.get_spotipy_client(token_info)
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
 
     total_playlists = user_playlists['total']
