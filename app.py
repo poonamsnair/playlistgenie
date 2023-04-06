@@ -205,7 +205,6 @@ def get_playlist_tracks(playlist_id, headers):
     return tracks
 
 
-
 @app.route('/playlists/')
 def playlists():
     if "access_token" not in session:
@@ -218,7 +217,7 @@ def playlists():
     user_id = user_info["id"]
     display_name = user_info["display_name"]
     limit = 12
-    api_limit = 50
+    api_limit = 100
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
 
@@ -264,8 +263,6 @@ def playlists():
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-
-
 
 
 
