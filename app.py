@@ -123,7 +123,7 @@ def index():
 
 @app.route('/login')
 def login():
-    auth_url = spotipy_client.sp_oauth.get_authorize_url(show_dialog=True)
+    auth_url = spotipy_client.sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 @app.route('/callback')
