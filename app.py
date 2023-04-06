@@ -178,9 +178,11 @@ def remove_duplicates(tracks):
 
 @app.route('/playlists/')
 def playlists():
-    if not session.get('token_info'):
-        return redirect(url_for('index'))
     sp = get_spotify_client()
+    if 'code' not in request.args:
+        return redirect(url_for('index'))
+    code = request.args['code']
+    token_info = sp.auth_manager.get_access_token(code)
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
