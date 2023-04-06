@@ -200,6 +200,7 @@ def get_playlists_data(access_token, offset, limit):
     user_info = sp.current_user()
     user_id = user_info["id"]
     api_limit = 50
+
     raw_playlists = []
     api_offset = 0
 
@@ -240,8 +241,10 @@ def get_playlists_data(access_token, offset, limit):
         "playlists": paginated_playlists,
         "unique_track_counts": unique_track_counts,
         "playlist_images": playlist_images,
+        "offset": offset,
         "total_playlists": total_playlists
     }
+
 
 
 # Add a decorator to handle rate limits
