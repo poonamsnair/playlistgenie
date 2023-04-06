@@ -6,12 +6,9 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import LeaveOneOut, GroupShuffleSplit, StratifiedKFold
-from sklearn.model_selection import KFold
+from sklearn.model_selection import LeaveOneOut, GroupShuffleSplit, StratifiedKFold, KFold
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import LeaveOneOut
 from sklearn.preprocessing import MinMaxScaler
-from functools import wraps
 from itertools import zip_longest
 from flask import flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -34,44 +31,114 @@ from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
 
+# Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
+
+# Create a new Flask web application using the current module's name as identifier
 app = Flask(__name__)
+
+# Set the secret key for the Flask app, used for securely signing session cookies
 app.secret_key = os.environ.get('SECRET_KEY')
+
+# Initialize the Bootstrap extension for easy integration with Flask app
 Bootstrap(app)
+
+# Initialize Flask-SocketIO for real-time communication between client and server
 socketio = SocketIO(app)
+
+# Add mobile support to the Flask app using Flask-Mobility extension
 Mobility(app)
 
 
+# initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
 
+# Return Stripe Keys
+def inject_stripe_keys():
+    # Check if the application environment is set to 'production'
+    if os.environ.get('APP_ENV', 'test') == 'production':
+        # Get Stripe publishable key from environment variables for production
+        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+        # Get Stripe buy button ID from environment variables for production
+        buy_button_id = os.environ.get('STRIPE_BUY_BUTTON_ID')
+    else:
+        # Use default test publishable key for non-production environments
+        publishable_key = 'pk_test_51MsPZqIpDJwsO3dTZhBli2IN4yPQgbAsxtj1AWnXWlH8rIvd2rdLEoefmBKXDCLeyPN3O9bDjKirR8VUgHS1zyFk00lbJ3ti7o'
+        # Use default test buy button ID for non-production environments
+        buy_button_id = 'buy_btn_1MsY4QIpDJwsO3dTMuyXa9KC'
 
+    # Return a dictionary containing the selected Stripe keys and IDs
+    return {
+        'stripe_publishable_key': publishable_key,
+        'stripe_buy_button_id': buy_button_id,
+    }
+
+# Inject stripe keys into the app
+@app.context_processor
+def inject_vars():
+    vars = inject_stripe_keys()
+    return vars
+
+# Custom error handler for your Flask app
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
+    # Log the unhandled exception with its details
     logging.exception('Unhandled exception: %s', e)
+    
+    # If the exception has an attribute 'code', use it; otherwise, set the default error code to 500 (Internal Server Error)
     error_code = getattr(e, 'code', 500)
+
+    # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
     return render_template('error.html', error_code=error_code), error_code
 
-def timeout(seconds=30, error_message='Function call timed out'):
-    def decorator(func):
-        def _handle_timeout():
-            raise TimeoutError(error_message)
 
-        def wrapper(*args, **kwargs):
-            timer = threading.Timer(seconds, _handle_timeout)
-            timer.start()
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                timer.cancel()
-            return result
+sp_oauth = SpotifyOAuth(
+    client_id=SPOTIPY_CLIENT_ID,
+    client_secret=SPOTIPY_CLIENT_SECRET,
+    redirect_uri=SPOTIPY_REDIRECT_URI,
+    scope=SCOPE
+)
 
-        return wraps(func)(wrapper)
+class SpotipyClient:
+    def __init__(self, client_id, client_secret, redirect_uri, scope):
+        self.sp_oauth = SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope=scope
+        )
 
-    return decorator
+    def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
+        token = token_info['access_token']
+        return spotipy.Spotify(auth=token)
 
+spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login')
+def login():
+    auth_url = spotipy_client.sp_oauth.get_authorize_url(show_dialog=True)
+    return redirect(auth_url)
+
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    token_info = spotipy_client.sp_oauth.get_access_token(code)
+    session['token_info'] = token_info
+    return redirect(url_for('playlists'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
+
+@staticmethod             
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
     for track in tracks:
@@ -80,166 +147,69 @@ def remove_duplicates(tracks):
             unique_tracks[track_id] = track
     return list(unique_tracks.values())
 
-def delete_playlist(spotify_token, playlist_id):
-    sp = spotipy.Spotify(auth=spotify_token)
-    user_id = sp.me()['id']
-    sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
+def delete_playlist(self, token_info, playlist_id):
+    spotify = self.get_client(token_info)
+    user_id = spotify.me()['id']
+    spotify.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
+    
+def get_playlist_tracks(self, token_info, playlist_id):
+    spotify = self.get_client(token_info)
+    playlist = spotify.playlist(playlist_id)
+    return playlist['tracks']['items']
 
-def inject_stripe_keys():
-    if os.environ.get('APP_ENV', 'test') == 'production':
-        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
-        buy_button_id = os.environ.get('STRIPE_BUY_BUTTON_ID')
-    else:
-        publishable_key = 'pk_test_51MsPZqIpDJwsO3dTZhBli2IN4yPQgbAsxtj1AWnXWlH8rIvd2rdLEoefmBKXDCLeyPN3O9bDjKirR8VUgHS1zyFk00lbJ3ti7o'
-        buy_button_id = 'buy_btn_1MsY4QIpDJwsO3dTMuyXa9KC'
-
-    return {
-        'stripe_publishable_key': publishable_key,
-        'stripe_buy_button_id': buy_button_id,
-    }
-
-@app.context_processor
-def inject_vars():
-    vars = inject_stripe_keys()
-    return vars
-
-def get_spotify_client(access_token):
-    client = spotipy.Spotify(auth=access_token)
-    return client
-
-def require_spotify_token(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if not session.get('spotify_token'):
-            auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                        redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-            auth_url = auth_manager.get_authorize_url()
-            return render_template('index.html', auth_url=auth_url)
-        else:
-            refresh_token_if_expired() 
-        return func(*args, **kwargs)
-    return wrapper
-
-def refresh_token_if_expired():
-    if session.get('spotify_token_info'):
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                    redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        token_info = session.get('spotify_token_info')
-        if auth_manager.is_token_expired(token_info):
-            token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
-            session['spotify_token_info'] = token_info
-            session['spotify_token'] = token_info['access_token']   
-
-            
-@app.route('/')
-def index():
-    if session.get('spotify_token') and not session.get('logged_out'):
-        return redirect(url_for('playlists'))
-
-    # Clear the logged_out session variable, if it exists
-    session.pop('logged_out', None)
-
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    auth_url = auth_manager.get_authorize_url()
-    auth_url += "&show_dialog=true"  # Add the show_dialog parameter to the URL
-    return render_template('index.html', auth_url=auth_url)
-
-
-@app.route('/logout')
-def logout():
-    # Clear session variables
-    session.pop('spotify_token', None)
-    session.pop('spotify_username', None)
-    session.pop('spotify_user_id', None)
-    session['logged_out'] = True
-
-    return redirect(url_for('index'))
-
-
-@app.route('/callback/')
-def callback():
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    token_info = auth_manager.get_access_token(request.args.get('code'))
-    session['spotify_token_info'] = token_info
-    session['spotify_token'] = token_info.get('access_token')
-    sp = spotipy.Spotify(auth=session['spotify_token'])
-    user_data = sp.current_user()
-    session['spotify_username'] = user_data['id']
-    session['user'] = {
-        'playlist_count': 0
-    }
-    return redirect(url_for('index'))
-
-
-def get_playlist_tracks(spotify_client, playlist_id):
-    playlist = spotify_client.playlist(playlist_id)
-    tracks = playlist['tracks']['items']
-    return tracks
-
-def paginate_playlists(playlists: List, limit: int, offset: int):
+def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
     start = offset
     end = offset + limit
     return playlists[start:end]
 
 @app.route('/playlists/')
-@require_spotify_token
 def playlists():
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+    token_info = session.get('token_info', None)
+    if token_info is None:
+        return redirect(url_for('index'))
+
     limit = 12
-    api_limit = 50
-
-    if not session.get('spotify_user_id'):
-        session['spotify_user_id'] = sp.current_user()['id']
-
-    playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
+    previous_offset = max(offset - limit, 0)
+    sp = spotipy_client.get_client(token_info)
+    api_limit = 50
+    api_offset = (offset // api_limit) * api_limit
+    user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
+
+    total_playlists = user_playlists['total']
+    all_playlists = user_playlists['items']
+
+    playlist_data = []
+    for playlist in all_playlists:
+        tracks = spotipy_client.get_playlist_tracks(token_info, playlist['id'])
+        unique_tracks = remove_duplicates(tracks)
+        if len(unique_tracks) >= 1:
+            playlist_data.append({
+                'id': playlist['id'],
+                'count': len(unique_tracks),
+                'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
+            })
+
+    paginated_playlists = paginate_playlists(playlist_data, limit, offset)
+    playlist_id = request.args.get('playlist_id', None)
 
     if playlist_id is None:
-        raw_playlists = []
-        api_offset = 0
-
-        while len(raw_playlists) < offset + limit:
-            playlists_batch = sp.current_user_playlists(limit=api_limit, offset=api_offset)
-            if not playlists_batch['items']:
-                break
-            raw_playlists.extend(playlists_batch['items'])
-            api_offset += api_limit
-
-        unique_track_counts = {}
-        playlist_images = {}
-        filtered_playlists = []
-
-        for playlist in raw_playlists:
-            tracks = get_playlist_tracks(sp, playlist['id'])
-            unique_tracks = remove_duplicates(tracks)
-            count = len(unique_tracks)
-
-            # Get playlist image
-            if playlist['images']:
-                playlist_images[playlist['id']] = playlist['images'][0]['url']
-            else:
-                playlist_images[playlist['id']] = None
-
-            # Add the playlist to filtered_playlists if it has at least one unique track
-            if count > 0:
-                unique_track_counts[playlist['id']] = count
-                filtered_playlists.append(playlist)
-
-        paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
-        previous_offset = max(offset - limit, 0)
-        total_playlists = len(filtered_playlists)
-
-        return render_template('playlist_list.html', playlists=paginated_playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, total_playlists=total_playlists, limit=limit, request=request)
+        return render_template(
+            'playlist_list.html',
+            playlists=[p['id'] for p in paginated_playlists],
+            unique_track_counts={p['id']: p['count'] for p in paginated_playlists},
+            playlist_images={p['id']: p['image_url'] for p in paginated_playlists},
+            offset=offset,
+            previous_offset=previous_offset,
+            total_playlists=total_playlists,
+            limit=limit,
+            request=request
+        )
     else:
         if request.MOBILE:
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-
-
-
 
 # Add a decorator to handle rate limits
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -253,7 +223,6 @@ def sp_track_with_retry(sp, track_id):
     return sp.track(track_id)
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -281,7 +250,6 @@ def rate_playlist(playlist_id):
 
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
@@ -310,7 +278,6 @@ def mobile_rate_playlist(playlist_id):
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
-@require_spotify_token
 def save_ratings(playlist_id):
     if session.get('spotify_token'):
         sp = spotipy.Spotify(auth=session['spotify_token'])
@@ -334,7 +301,6 @@ def save_ratings(playlist_id):
     
     
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def create_playlist(playlist_id):
     if not session.get('spotify_token'):
         return redirect(url_for('index'))   
@@ -365,7 +331,6 @@ def create_playlist(playlist_id):
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
-@require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
         spotify_token = session['spotify_token']
