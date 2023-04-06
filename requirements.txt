@@ -15,3 +15,4 @@ flask_caching
 flask_session
 typing
 oauthlib
+requests_oauthlib
