@@ -178,7 +178,6 @@ def get_playlist_tracks(playlist_id, headers):
         url = response["next"]
     return tracks
 
-
 @app.route('/playlists/')
 def playlists():
     if "access_token" not in session:
@@ -188,28 +187,19 @@ def playlists():
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
 
-    api_response, status_code = api_playlists()
-    api_data = api_response.get_json()
+    playlists_data = get_playlists_data(session["access_token"], offset, limit)
+    playlists = playlists_data["playlists"]
+    unique_track_counts = playlists_data["unique_track_counts"]
+    playlist_images = playlists_data["playlist_images"]
+    total_playlists = playlists_data["total_playlists"]
 
-    total_playlists = api_data["total_playlists"]
+    return render_template('playlist_list.html', playlists=playlists, unique_track_counts=unique_track_counts, playlist_images=playlist_images, offset=offset, previous_offset=previous_offset, limit=limit, request=request, total_playlists=total_playlists)
 
-    return render_template('playlist_list.html', offset=offset, previous_offset=previous_offset, limit=limit, request=request, total_playlists=total_playlists)
-
-
-@app.route('/api/playlists/')
-def api_playlists():
-    if "token_info" not in session:
-        return jsonify({"error": "Not logged in"}), 401
-
-    access_token = session["token_info"]["access_token"]
-    sp = spotipy.Spotify(auth=access_token)
-
+def get_playlists_data(access_token, offset, limit):
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(access_token=access_token))
     user_info = sp.current_user()
     user_id = user_info["id"]
-    limit = 12
     api_limit = 50
-    offset = int(request.args.get('offset', 0))
-
     raw_playlists = []
     api_offset = 0
 
@@ -246,14 +236,12 @@ def api_playlists():
     paginated_playlists = paginate_playlists(filtered_playlists, limit, offset)
     total_playlists = len(filtered_playlists)
 
-    return jsonify({
+    return {
         "playlists": paginated_playlists,
         "unique_track_counts": unique_track_counts,
         "playlist_images": playlist_images,
-        "offset": offset,
         "total_playlists": total_playlists
-    })
-
+    }
 
 
 # Add a decorator to handle rate limits

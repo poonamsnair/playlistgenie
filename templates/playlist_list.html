@@ -12,7 +12,24 @@
 <div class="container content-container">
   <h1 class="playlists-h1 mb-4">Your Playlists</h1>
   <div class="row" id="playlists-container">
-    <!-- Playlists will be loaded here via JavaScript -->
+    {% for playlist in playlists %}
+      {% set uniqueTrackCount = unique_track_counts[playlist.id] %}
+      {% set playlistImage = playlist_images[playlist.id] %}
+      <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+        <div class="card playlist-card">
+          <div class="card-body">
+            <h5 class="card-title">
+              {% if playlistImage %}
+                <img src="{{ playlistImage }}" class="playlist-img mr-2" alt="{{ playlist.name }}">
+              {% endif %}
+              {{ playlist.name }}
+            </h5>
+            <p class="card-text">Tracks: {{ uniqueTrackCount }}</p>
+            <!-- Add the rest of the card elements, such as the "Rate Playlist" button, based on your original logic. -->
+          </div>
+        </div>
+      </div>
+    {% endfor %}
   </div>
    <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
@@ -87,5 +104,3 @@ async function fetchPlaylists() {
 fetchPlaylists();
 
 </script>
-
-{% endblock %}
