@@ -24,13 +24,13 @@
                             {{ playlist['name'] }}
                         </h5>
                         <p class="card-text">Tracks: {{ unique_track_count }}</p>
-                        {% if unique_track_count >= 5 and unique_track_count <= 100 %}
+                        {% if unique_track_counts >= 5 and unique_track_counts <= 100 %}
                             {% if request.MOBILE %}
                                 <a href="{{ url_for('mobile_rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
                             {% else %}
                                 <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
                             {% endif %}
-                        {% elif unique_track_count < 5 %}
+                        {% elif unique_track_counts < 5 %}
                             <button class="btn btn-secondary" role="button" data-toggle="tooltip" data-placement="top" title="This playlist has less than 5 unique tracks" disabled>Rate Playlist</button>
                         {% else %}
                             <button class="btn btn-secondary" role="button" data-toggle="tooltip" data-placement="top" title="This playlist has more than 100 unique tracks" disabled>Rate Playlist</button>
