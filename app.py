@@ -157,16 +157,13 @@ def callback():
     token_info = spotipy_client.sp_oauth.get_access_token(code)
     if token_info:
         print("Token info received successfully")
-        sp = spotipy_client.get_spotipy_client(token_info)
-        user = sp.me()
-        session['sp'] = sp
-        session['token_info'] = token_info
-        print("Logged in as: ", user['display_name'])
-        return redirect(url_for('playlists'))
     else:
         print("Failed to retrieve token info")
-        return render_template('error.html', error='Failed to retrieve token info')
-
+    session['token_info'] = token_info
+    sp = spotipy_client.get_spotipy_client(token_info)
+    user = sp.me()
+    print("Logged in as: ", user['display_name'])
+    return redirect(url_for('playlists'))
 
 @app.route('/logout')
 def logout():
@@ -181,23 +178,14 @@ def remove_duplicates(tracks):
             unique_tracks[track_id] = track
     return list(unique_tracks.values())
 
-@app.route('/token_info')
-def token_info():
-    token_info = session.get('token_info')
-    if token_info:
-        return f'Token info: {token_info}'
-    else:
-        return 'No token info found in session'
 
 def delete_playlist(token_info, playlist_id):
-    token_info = session.get('token_info', None)
     spotipy_client = session.get('spotipy_client')
     sp = spotipy_client.get_spotipy_client(token_info)
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(token_info, playlist_id):
-    token_info = session.get('token_info', None)
     spotipy_client = session.get('spotipy_client')
     sp = spotipy_client.get_spotipy_client(token_info)
     playlist = sp.playlist(playlist_id)
@@ -214,12 +202,12 @@ def playlists():
     token_info = session.get('token_info', None)
     if token_info is None:
         return redirect(url_for('index'))
+
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    token_info = session.get('token_info', None)
     spotipy_client = session.get('spotipy_client')
     sp = spotipy_client.get_spotipy_client(token_info)
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
