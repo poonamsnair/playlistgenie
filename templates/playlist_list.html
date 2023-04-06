@@ -11,34 +11,8 @@
 
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
-    <div class="row">
-    {% for playlist in playlists %}
-            {% set unique_track_count = unique_track_counts[playlist['id']] %}
-            <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-                <div class="card playlist-card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            {% if playlist['images'] %}
-                                <img src="{{ playlist['images'][0]['url'] }}" class="playlist-img mr-2" alt="{{ playlist['name'] }}">
-                            {% endif %}
-                            {{ playlist['name'] }}
-                        </h5>
-                        <p class="card-text">Tracks: {{ unique_track_count }}</p>
-                        {% if unique_track_count >= 5 and unique_track_count <= 100 %}
-                            {% if request.MOBILE %}
-                                <a href="{{ url_for('mobile_rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
-                            {% else %}
-                                <a href="{{ url_for('rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
-                            {% endif %}
-                        {% elif unique_track_count < 5 %}
-                            <button class="btn btn-secondary" role="button" data-toggle="tooltip" data-placement="top" title="This playlist has less than 5 unique tracks" disabled>Rate Playlist</button>
-                        {% else %}
-                            <button class="btn btn-secondary" role="button" data-toggle="tooltip" data-placement="top" title="This playlist has more than 100 unique tracks" disabled>Rate Playlist</button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        {% endfor %}
+    <div id="playlists-container" class="row">
+        <!-- Playlists will be loaded here via JavaScript -->
     </div>
    <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
@@ -56,4 +30,61 @@
         </ul>
     </nav>
 </div>
+
+<script>
+  async function fetchPlaylists() {
+    const offset = {{ offset }};
+    const limit = {{ limit }};
+    const response = await fetch(`/api/playlists?offset=${offset}&limit=${limit}`);
+    const data = await response.json();
+    const playlists = data.playlists;
+    const uniqueTrackCounts = data.unique_track_counts;
+    const playlistImages = data.playlist_images;
+
+    const playlistsContainer = document.getElementById('playlists-container');
+
+    for (const playlist of playlists) {
+      const uniqueTrackCount = uniqueTrackCounts[playlist.id];
+      const playlistImage = playlistImages[playlist.id];
+
+      const playlistCol = document.createElement('div');
+      playlistCol.className = 'col-lg-4 col-md-6 col-sm-12 mb-4';
+
+      const playlistCard = document.createElement('div');
+      playlistCard.className = 'card playlist-card';
+
+      const cardBody = document.createElement('div');
+      cardBody.className = 'card-body';
+
+      const cardTitle = document.createElement('h5');
+      cardTitle.className = 'card-title';
+
+      if (playlistImage) {
+        const img = document.createElement('img');
+        img.src = playlistImage;
+        img.className = 'playlist-img mr-2';
+        img.alt = playlist.name;
+        cardTitle.appendChild(img);
+      }
+
+      const playlistName = document.createTextNode(playlist.name);
+      cardTitle.appendChild(playlistName);
+      cardBody.appendChild(cardTitle);
+
+      const trackCountText = document.createElement('p');
+      trackCountText.className = 'card-text';
+      trackCountText.textContent = `Tracks: ${uniqueTrackCount}`;
+      cardBody.appendChild(trackCountText);
+
+      // Add the rest of the card elements, such as the "Rate Playlist" button, based on your original logic.
+
+      playlistCard.appendChild(cardBody);
+      playlistCol.appendChild(playlistCard);
+      playlistsContainer.appendChild(playlistCol);
+    }
+  }
+
+  fetchPlaylists();
+</script>
+
 {% endblock %}
