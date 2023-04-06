@@ -122,7 +122,8 @@ class SpotipyClient:
 
     def get_spotipy_client(self, token_info) -> spotipy.client.Spotify:
         token = token_info['access_token']
-        self.spotify = spotipy.Spotify(auth=token)
+        return spotipy.Spotify(auth=token)
+
 
 @app.route('/')
 def index():
@@ -132,34 +133,22 @@ def index():
 def login():
     # Initialize a new SpotipyClient instance for each user
     spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    session['spotipy_client'] = spotipy_client
+    session['spotipy_token_info'] = spotipy_client.sp_oauth.get_cached_token()
     auth_url = spotipy_client.sp_oauth.get_authorize_url()
     print("Login URL generated: ", auth_url)
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
-    # Get the SpotipyClient instance from the session
     spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
-    if not spotipy_client:
-        return render_template('error.html', error='An error occurred. Please try logging in again.')
-
-    error = request.args.get('error', None)
-    if error:
-        print("Error in callback: ", error)
-        return render_template('error.html', error=error)
-    code = request.args.get('code')
-    print("Code received: ", code)
-    token_info = spotipy_client.sp_oauth.get_access_token(code)
-    if token_info:
-        print("Token info received successfully")
-    else:
-        print("Failed to retrieve token info")
-    session['token_info'] = token_info
-    sp = spotipy_client.get_spotipy_client(token_info)
-    user = sp.me()
-    print("Logged in as: ", user['display_name'])
+    auth_token = request.args.get('code')
+    token_info = spotipy_client.sp_oauth.get_access_token(code=auth_token)
+    session['spotipy_token_info'] = token_info
     return redirect(url_for('playlists'))
+
+def get_spotify_client(token_info):
+    spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
+    return spotipy_client.get_spotipy_client(token_info)
 
 @app.route('/logout')
 def logout():
@@ -178,6 +167,7 @@ def remove_duplicates(tracks):
 def delete_playlist(token_info, playlist_id):
     spotipy_client = SpotipyClient(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SCOPE)
     sp = spotipy_client.get_spotipy_client(token_info)
+    user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
