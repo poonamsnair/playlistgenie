@@ -131,7 +131,6 @@ def callback():
     error = request.args.get('error', None)
     if error:
         return render_template('error.html', error=error)
-
     code = request.args.get('code')
     token_info = spotipy_client.sp_oauth.get_access_token(code)
     session['token_info'] = token_info
@@ -202,7 +201,7 @@ def playlists():
         return render_template(
             'playlist_list.html',
             playlists=[p['id'] for p in paginated_playlists],
-            unique_track_counts={p['id']: p['count'] for p in paginated_playlists},
+            unique_track_count={p['id']: p['count'] for p in paginated_playlists},
             playlist_images={p['id']: p['image_url'] for p in paginated_playlists},
             offset=offset,
             previous_offset=previous_offset,
