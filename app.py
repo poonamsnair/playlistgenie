@@ -202,7 +202,7 @@ def playlists():
                 'id': playlist['id'],
                 'name': playlist['name'],  # Add the playlist name
                 'images': playlist['images'],  # Add the playlist images
-                'count': len(unique_tracks),
+                'unique_track_count': len(unique_tracks),
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
             })
     paginated_playlists = paginate_playlists(playlist_data, limit, offset)
