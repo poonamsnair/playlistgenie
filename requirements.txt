@@ -16,3 +16,4 @@ flask_session
 typing
 oauthlib
 requests_oauthlib
+requests

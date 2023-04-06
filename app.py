@@ -14,6 +14,7 @@ import threading
 import spotipy
 import base64
 import hashlib
+import requests
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
 from spotipy.oauth2 import SpotifyOAuth
@@ -44,6 +45,7 @@ from hashlib import sha256
 from os import urandom
 from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
+from urllib.parse import urlencode
 
 eventlet.monkey_patch()
 app = Flask(__name__)
@@ -56,9 +58,10 @@ Session(app)
 
 
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
-SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI')
-SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
-SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
+# Set your Spotify client ID and redirect URI
+client_id = os.environ.get("SPOTIFY_CLIENT_ID")
+client_secret = os.environ.get("SPOTIFY_CLIENT_SECRET")
+redirect_uri = os.environ.get("SPOTIFY_REDIRECT_URI")
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -107,100 +110,125 @@ def inject_vars():
     vars = inject_stripe_keys()
     return vars
 
-def get_spotify_client():
-    token_info = session.get('token_info')
-    if not token_info:
-        return None
-    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
-    oauth = OAuth2Session(client=client)
-    oauth.token = token_info
-    return oauth
+# Helper functions
 
-@app.route('/logout/')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
+def generate_pkce_code_verifier():
+    return secrets.token_urlsafe(64)
+
+def generate_pkce_code_challenge(code_verifier):
+    digest = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).decode("utf-8").rstrip("=")
+
+# Routes and functions
 
 @app.route("/")
 def index():
-    session.clear()
-    code_verifier = base64.urlsafe_b64encode(os.urandom(32)).decode("utf-8").rstrip("=")
+    if "access_token" in session:
+        return redirect(url_for("playlists"))
+    else:
+        return render_template("index.html")
+
+@app.route("/login")
+def login():
+    code_verifier = generate_pkce_code_verifier()
+    code_challenge = generate_pkce_code_challenge(code_verifier)
     session["code_verifier"] = code_verifier
-    code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
-    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip("=")
-    authorization_endpoint = "https://accounts.spotify.com/authorize"
-    redirect_uri = SPOTIFY_REDIRECT_URI
-    scope = SCOPE
-    state = secrets.token_urlsafe(16)
-    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
-    oauth = OAuth2Session(client=client, scope=scope, redirect_uri=redirect_uri)
-    uri, headers, _ = oauth.authorization_url(authorization_endpoint,
-                                               state=state,
-                                               code_challenge=code_challenge,
-                                               code_challenge_method="S256",
-                                               show_dialog=True)
-    session["oauth_state"] = state
-    session["oauth_code_verifier"] = code_verifier
-    return redirect(uri)
+
+    auth_params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "scope": "user-read-private playlist-read-private",
+        "code_challenge_method": "S256",
+        "code_challenge": code_challenge,
+    }
+
+    # Redirect the user to the Spotify authorization endpoint
+    return redirect("https://accounts.spotify.com/authorize?" + urlencode(auth_params))
+
+@app.route("/logout")
+def logout():
+    session.pop("access_token", None)
+    session.pop("refresh_token", None)
+    session.pop("code_verifier", None)
+    return redirect(url_for("index"))
+
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
     error = request.args.get("error")
+
     if error:
-        return f"Error: {error}"
-    code_verifier = session.pop("code_verifier", None)
-    if not code_verifier:
-        return "Error: Invalid state"
-    token_endpoint = "https://accounts.spotify.com/api/token"
-    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
-    oauth = OAuth2Session(client=client, redirect_uri=SPOTIFY_REDIRECT_URI)
-    token = oauth.fetch_token(token_endpoint,
-                              client_id=SPOTIFY_CLIENT_ID,
-                              client_secret=SPOTIFY_CLIENT_SECRET,
-                              authorization_response=request.url,
-                              code_verifier=code_verifier)
-    session["token_info"] = token
+        # Handle errors here
+        return "Error: " + error
+
+    code_verifier = session["code_verifier"]
+
+    # Exchange the authorization code for an access token and refresh token
+    token_response = requests.post("https://accounts.spotify.com/api/token", data={
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "client_id": client_id,
+        "code_verifier": code_verifier,
+    }).json()
+
+    session["access_token"] = token_response["access_token"]
+    session["refresh_token"] = token_response["refresh_token"]
+
     return redirect(url_for("playlists"))
 
+def remove_duplicates(tracks):
+    unique_tracks = []
+    track_ids = set()
 
-def get_playlist_tracks(spotify_client, playlist_id):
-    playlist = spotify_client.playlist(playlist_id)
-    tracks = playlist['tracks']['items']
+    for track in tracks:
+        if track['track']['id'] not in track_ids:
+            unique_tracks.append(track)
+            track_ids.add(track['track']['id'])
+
+    return unique_tracks
+
+
+def paginate_playlists(playlists, limit, offset):
+    return playlists[offset:offset + limit]
+
+
+def get_playlist_tracks(playlist_id, headers):
+    tracks = []
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    while url:
+        response = requests.get(url, headers=headers).json()
+        tracks.extend(response["items"])
+        url = response["next"]
     return tracks
 
-def paginate_playlists(playlists: List, limit: int, offset: int):
-    start = offset
-    end = offset + limit
-    return playlists[start:end]
-
-def remove_duplicates(tracks):
-    unique_tracks = OrderedDict()
-    for track in tracks:
-        if track['track'] is not None:
-            track_id = track['track']['id']
-            if track_id not in unique_tracks:
-                unique_tracks[track_id] = track
-    return list(unique_tracks.values())
 
 
 @app.route('/playlists/')
 def playlists():
-    token_info = session.get('token_info')
-    if not token_info:
-        return redirect(url_for('index'))
-    sp = get_spotify_client()
+    if "access_token" not in session:
+        return redirect(url_for("index"))
+
+    # Get the current user's information
+    headers = {"Authorization": "Bearer " + session["access_token"]}
+    user_info = requests.get("https://api.spotify.com/v1/me", headers=headers).json()
+
+    user_id = user_info["id"]
+    display_name = user_info["display_name"]
     limit = 12
     api_limit = 50
     playlist_id = request.args.get('playlist_id')
     offset = int(request.args.get('offset', 0))
+
     if playlist_id is None:
         raw_playlists = []
         api_offset = 0
 
         while len(raw_playlists) < offset + limit:
             print(f"Retrieving batch of playlists from offset {api_offset}...")
-            playlists_batch = sp.current_user_playlists(limit=api_limit, offset=api_offset)
+            playlists_batch = requests.get(f"https://api.spotify.com/v1/users/{user_id}/playlists?limit={api_limit}&offset={api_offset}", headers=headers).json()
             if not playlists_batch['items']:
                 print("No more playlists to retrieve.")
                 break
@@ -212,7 +240,7 @@ def playlists():
         filtered_playlists = []
 
         for playlist in raw_playlists:
-            tracks = get_playlist_tracks(sp, playlist['id'])
+            tracks = get_playlist_tracks(playlist['id'], headers)
             unique_tracks = remove_duplicates(tracks)
             count = len(unique_tracks)
 
@@ -236,6 +264,7 @@ def playlists():
             return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
         else:
             return redirect(url_for('rate_playlist', playlist_id=playlist_id))
+
 
 
 
