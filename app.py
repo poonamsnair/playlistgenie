@@ -177,8 +177,7 @@ def get_playlist_tracks(sp, playlist_id):
     return tracks
 
 
-
-@app.route('/playlists')
+@app.route('/playlists/')
 def playlists():
     # Get authorization from Spotify
    # Get authorization from Spotify
