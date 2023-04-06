@@ -123,16 +123,26 @@ def index():
 @app.route('/login')
 def login():
     auth_url = spotipy_client.sp_oauth.get_authorize_url()
+    print("Login URL generated: ", auth_url)
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
     error = request.args.get('error', None)
     if error:
+        print("Error in callback: ", error)
         return render_template('error.html', error=error)
     code = request.args.get('code')
+    print("Code received: ", code)
     token_info = spotipy_client.sp_oauth.get_access_token(code)
+    if token_info:
+        print("Token info received successfully")
+    else:
+        print("Failed to retrieve token info")
     session['token_info'] = token_info
+    sp = spotipy_client.get_spotipy_client(token_info)
+    user = sp.me()
+    print("Logged in as: ", user['display_name'])
     return redirect(url_for('playlists'))
 
 
