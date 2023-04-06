@@ -152,15 +152,16 @@ def remove_duplicates(tracks):
             unique_tracks[track_id] = track
     return list(unique_tracks.values())
 
-def delete_playlist(self, token_info, playlist_id):
-    spotify = self.get_client(token_info)
+def delete_playlist(token_info, playlist_id):
+    spotify = spotipy_client.get_spotipy_client(token_info)
     user_id = spotify.me()['id']
     spotify.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
-    
-def get_playlist_tracks(self, token_info, playlist_id):
-    spotify = self.get_client(token_info)
+
+def get_playlist_tracks(token_info, playlist_id):
+    spotify = spotipy_client.get_spotipy_client(token_info)
     playlist = spotify.playlist(playlist_id)
     return playlist['tracks']['items']
+
 
 def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
     start = offset
