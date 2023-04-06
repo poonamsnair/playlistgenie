@@ -56,7 +56,7 @@ $(document).ready(function() {
   // Function to fetch playlists and update the page
   function fetchPlaylists(offset, limit) {
     $.ajax({
-      url: '/playlists',
+      url: '/playlists/',
       data: { offset: offset, limit: limit },
       success: function(data) {
         // Extract playlist data from response

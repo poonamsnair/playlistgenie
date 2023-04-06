@@ -180,7 +180,6 @@ def get_playlist_tracks(sp, playlist_id):
 @app.route('/playlists/')
 def playlists():
     # Get authorization from Spotify
-   # Get authorization from Spotify
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
                                                client_secret=client_secret,
                                                redirect_uri=redirect_uri,
@@ -190,14 +189,25 @@ def playlists():
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
     playlists = sp.current_user_playlists(limit=limit, offset=offset)
-    
-    # Get unique track counts and playlist images
-    unique_track_counts = {}
+
+    # Get all playlist tracks and images at once
+    playlist_ids = [playlist['id'] for playlist in playlists['items']]
+    playlist_tracks = {}
     playlist_images = {}
-    for playlist in playlists['items']:
-        unique_track_counts[playlist['id']] = len(set(track['track']['id'] for track in sp.playlist_tracks(playlist['id'])['items']))
-        if playlist['images']:
-            playlist_images[playlist['id']] = playlist['images'][0]['url']
+    for i in range(0, len(playlist_ids), 50):
+        batch_ids = playlist_ids[i:i+50]
+        batch_tracks = sp.playlist_tracks(batch_ids)
+        for j, playlist_id in enumerate(batch_ids):
+            playlist_tracks[playlist_id] = batch_tracks['items'][j]['track']['id']
+        batch_images = sp.playlist_cover_image(batch_ids)
+        for j, playlist_id in enumerate(batch_ids):
+            if batch_images[j]:
+                playlist_images[playlist_id] = batch_images[j]['url']
+
+    # Generate unique track counts
+    unique_tracks = remove_duplicates(playlist_tracks)
+    unique_track_counts = len(unique_tracks)
+
     
     # Paginate playlists
     paginated_playlists = paginate_playlists(playlists['items'], limit, offset)
