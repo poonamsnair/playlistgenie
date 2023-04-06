@@ -42,10 +42,12 @@ from flask_session import Session
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from hashlib import sha256
 from os import urandom
+from oauthlib.oauth2 import BackendApplicationClient
+from requests_oauthlib import OAuth2Session
 
 eventlet.monkey_patch()
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY')
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", default=os.urandom(24))
 Bootstrap(app)
 socketio = SocketIO(app)
 Mobility(app)
@@ -54,10 +56,9 @@ Session(app)
 
 
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
-SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
-SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
-SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
-
+SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI')
+SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
@@ -106,45 +107,14 @@ def inject_vars():
     vars = inject_stripe_keys()
     return vars
 
-def refresh_token_if_expired():
-    if session.get('spotify_token_info'):
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET,
-                                    redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-        token_info = session.get('spotify_token_info')
-        if auth_manager.is_token_expired(token_info):
-            token_info = auth_manager.refresh_access_token(token_info['refresh_token'])
-            session['spotify_token_info'] = token_info
-            session['spotify_token'] = token_info['access_token']   
-
-def require_spotify_token(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path='.spotifycache')
-        if not auth_manager.validate_token(session.get('spotify_token')):
-            auth_url = auth_manager.get_authorize_url()
-            return redirect(auth_url)
-        else:
-            refresh_token_if_expired(auth_manager)
-        return func(*args, **kwargs)
-    return wrapper
-
-@app.after_request
-def add_no_cache_headers(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
-
-def get_verifier_and_challenge():
-    """Generate a code verifier and its SHA256 challenge."""
-    verifier = urlsafe_b64encode(urandom(32)).decode('utf-8')
-    challenge = urlsafe_b64encode(sha256(verifier.encode('utf-8')).digest()).decode('utf-8')
-    return verifier, challenge
-    
 def get_spotify_client():
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    return spotipy.Spotify(auth_manager=auth_manager)
-
+    token_info = session.get('token_info')
+    if not token_info:
+        return None
+    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
+    oauth = OAuth2Session(client=client)
+    oauth.token = token_info
+    return oauth
 
 @app.route('/logout/')
 def logout():
@@ -158,9 +128,20 @@ def index():
     session["code_verifier"] = code_verifier
     code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
     code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip("=")
-    url = f"https://accounts.spotify.com/authorize?response_type=code&client_id={SPOTIPY_CLIENT_ID}&scope={SCOPE}&redirect_uri={SPOTIPY_REDIRECT_URI}&code_challenge_method=S256&code_challenge={code_challenge}&show_dialog=true"
-    return redirect(url)
-
+    authorization_endpoint = "https://accounts.spotify.com/authorize"
+    redirect_uri = SPOTIFY_REDIRECT_URI
+    scope = SCOPE
+    state = secrets.token_urlsafe(16)
+    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
+    oauth = OAuth2Session(client=client, scope=scope, redirect_uri=redirect_uri)
+    uri, headers, _ = oauth.authorization_url(authorization_endpoint,
+                                               state=state,
+                                               code_challenge=code_challenge,
+                                               code_challenge_method="S256",
+                                               show_dialog=True)
+    session["oauth_state"] = state
+    session["oauth_code_verifier"] = code_verifier
+    return redirect(uri)
 
 @app.route("/callback")
 def callback():
@@ -171,17 +152,15 @@ def callback():
     code_verifier = session.pop("code_verifier", None)
     if not code_verifier:
         return "Error: Invalid state"
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": SPOTIPY_REDIRECT_URI,
-        "client_id": SPOTIPY_CLIENT_ID,
-        "code_verifier": code_verifier,
-    }
-    auth_manager = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    token_info = auth_manager.get_access_token(code, code_verifier=code_verifier)
-    session["spotify_token_info"] = token_info
-    session["spotify_token"] = token_info['access_token']
+    token_endpoint = "https://accounts.spotify.com/api/token"
+    client = BackendApplicationClient(client_id=SPOTIFY_CLIENT_ID)
+    oauth = OAuth2Session(client=client, redirect_uri=SPOTIFY_REDIRECT_URI)
+    token = oauth.fetch_token(token_endpoint,
+                              client_id=SPOTIFY_CLIENT_ID,
+                              client_secret=SPOTIFY_CLIENT_SECRET,
+                              authorization_response=request.url,
+                              code_verifier=code_verifier)
+    session["token_info"] = token
     return redirect(url_for("playlists"))
 
 
@@ -207,7 +186,8 @@ def remove_duplicates(tracks):
 
 @app.route('/playlists/')
 def playlists():
-    if not session.get('token_info'):
+    token_info = session.get('token_info')
+    if not token_info:
         return redirect(url_for('index'))
     sp = get_spotify_client()
     limit = 12
@@ -272,7 +252,6 @@ def sp_track_with_retry(sp, track_id):
     return sp.track(track_id)
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def rate_playlist(playlist_id):
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
@@ -300,7 +279,6 @@ def rate_playlist(playlist_id):
 
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def mobile_rate_playlist(playlist_id):
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
@@ -329,7 +307,6 @@ def mobile_rate_playlist(playlist_id):
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
-@require_spotify_token
 def save_ratings(playlist_id):
     if session.get('spotify_token'):
         sp = spotipy.Spotify(auth=session['spotify_token'])
@@ -353,7 +330,6 @@ def save_ratings(playlist_id):
     
     
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
-@require_spotify_token
 def create_playlist(playlist_id):
     if not session.get('spotify_token'):
         return redirect(url_for('index'))   
@@ -384,7 +360,6 @@ def create_playlist(playlist_id):
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
-@require_spotify_token
 def recommendation(playlist_id, rec_playlist_id):
     if session.get('spotify_token'):
         spotify_token = session['spotify_token']
