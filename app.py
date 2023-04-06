@@ -108,9 +108,10 @@ def index():
 
 @app.route('/login')
 def login():
-    sp_oauth = SpotifyOAuth(client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=SCOPE)
-    auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
+    username = request.args.get('username')
+    token = util.prompt_for_user_token(username, SCOPE, client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI)
+    session['token'] = token
+    return redirect(url_for('playlists'))
 
 @app.route('/callback')
 def callback():
@@ -158,7 +159,7 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
 
 @app.route('/playlists/')
 def playlists():
-    token_info = session.get('token', None)
+    token_info = session.get('token')
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
