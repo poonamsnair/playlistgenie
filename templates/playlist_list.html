@@ -2,13 +2,12 @@
 
 {% block content %}
 <style>
-@media (max-width: 767px) {
-  .pagination .page-item:not(.page-item-back):not(.page-item-next) {
-    display: none;
-  }
-}
-</style>
-
+    @media (max-width: 767px) {
+     .pagination .page-item:not(.page-item-back):not(.page-item-next) {
+       display: none;
+     }
+    }
+</style> 
 <div class="container content-container">
     <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
@@ -40,7 +39,7 @@
             </div>
         {% endfor %}
     </div>
-   <nav aria-label="Page navigation example">
+    <nav aria-label="Page navigation example">
         <ul class="pagination justify-content-center">
             <li class="page-item page-item-back {% if offset == 0 %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('playlists', offset=previous_offset) }}">Back</a>
@@ -55,5 +54,5 @@
             </li>
         </ul>
     </nav>
-</div>
-{% endblock %}
+ </div>
+ {% endblock %}

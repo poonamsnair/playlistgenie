@@ -189,7 +189,7 @@ def playlists():
     unique_track_counts = {}
     for playlist in all_playlists:
         tracks = get_playlist_tracks(sp, playlist['id'])
-        unique_tracks = remove_duplicates(tracks)
+        unique_tracks = remove_duplicates(tracks) 
         if len(unique_tracks) >= 1:
             playlist_data.append({
                 'id': playlist['id'],
@@ -199,27 +199,22 @@ def playlists():
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
             })
             unique_track_counts[playlist['id']] = len(unique_tracks)
+
+    total_filtered_playlists = len(playlist_data)  # Update the total playlists count
     paginated_playlists = paginate_playlists(playlist_data, limit, offset)
     playlist_id = request.args.get('playlist_id', None)
-
-    if playlist_id is None:
-        return render_template(
-            'playlist_list.html',
-            playlists=paginated_playlists,
-            playlist_id=playlist_id,
-            unique_track_counts=unique_track_counts,
-            offset=offset,
-            previous_offset=previous_offset,
-            total_playlists=total_playlists,
-            limit=limit,
-            request=request
-        )
-    else:
-        if request.MOBILE:
-            return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
-        else:
-            return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-
+    return render_template(
+        'playlist_list.html',
+        playlists=paginated_playlists,
+        playlist_id=playlist_id,
+        unique_track_counts=unique_track_counts,
+        offset=offset,
+        previous_offset=previous_offset,
+        total_playlists=total_filtered_playlists,  # Pass the filtered playlists count
+        limit=limit,
+        request=request
+    )
+   
 # Add a decorator to handle rate limits
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10),
        retry=retry_if_exception_type(SpotifyException))
