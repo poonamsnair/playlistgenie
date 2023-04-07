@@ -139,12 +139,10 @@ def login():
     if not auth_manager.get_cached_token():
         # Step 2. Display sign in link when no token
         auth_url = auth_manager.get_authorize_url()
-        return render_template('sign_in.html', auth_url=auth_url)
+        return redirect(auth_url)
 
     # Step 4. Signed in, redirect to playlists
     return redirect('/playlists')
-
-
 
 @app.route('/logout')
 def logout():
@@ -155,6 +153,16 @@ def logout():
         print("Error: %s - %s." % (e.filename, e.strerror))
     session.clear()
     return redirect('/')
+
+def create_spotify_instance():
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
+                                               cache_path=session_cache_path())
+
+    if not auth_manager.get_cached_token():
+        return None
+
+    return spotipy.Spotify(auth_manager=auth_manager)
 
 
 def remove_duplicates(tracks):
@@ -167,17 +175,17 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(playlist_id):
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               cache_path=session_cache_path())
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+    sp = create_spotify_instance()
+    if sp is None:
+        return
     user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(playlist_id):
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               cache_path=session_cache_path())
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+    sp = create_spotify_instance()
+    if sp is None:
+        return
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
@@ -189,11 +197,9 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
 
 @app.route('/playlists/')
 def playlists():
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               cache_path=session_cache_path())
-    if not auth_manager.get_cached_token():
+    sp = create_spotify_instance()
+    if sp is None:
         return redirect('/')
-    sp = spotipy.Spotify(auth_manager=auth_manager)
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
