@@ -7,7 +7,7 @@
         {% for playlist in playlists %}
             {% set unique_track_count = unique_track_counts[playlist['id']] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-                <div class="card playlist-card" style="background: linear-gradient(135deg, #121212 0%, #323232 100%); border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
+                <div class="card playlist-card" style="border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
                     <div class="card-body">
                         <h5 class="card-title">
                             {% if playlist['images'] %}
