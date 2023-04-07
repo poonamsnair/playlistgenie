@@ -63,7 +63,10 @@ if not os.path.exists(caches_folder):
     os.makedirs(caches_folder)
 
 def session_cache_path():
-    return caches_folder + session.get('uuid')
+    uuid = session.get('uuid')
+    if uuid is None:
+        return None
+    return caches_folder + uuid
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
