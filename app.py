@@ -118,7 +118,7 @@ def get_token():
 def index():
     return render_template('index.html')
 
-@app.route('/')
+@app.route('/login')
 def index():
     if not session.get('uuid'):
         # Step 1. Visitor is unknown, give random ID
@@ -137,7 +137,7 @@ def index():
     if not auth_manager.get_cached_token():
         # Step 2. Display sign in link when no token
         auth_url = auth_manager.get_authorize_url()
-        return f'<h2><a href="{auth_url}">Sign in</a></h2>'
+        return render_template('sign_in.html', auth_url=auth_url)
 
     # Step 4. Signed in, redirect to playlists
     return redirect('/playlists')
