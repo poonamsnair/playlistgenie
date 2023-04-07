@@ -261,7 +261,7 @@ def rate_playlist(playlist_id):
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
 
     try:
-        tracks = get_playlist_tracks_with_retry(sp, playlist_id)
+        tracks = get_playlist_tracks_with_retry(playlist_id)
         unique_tracks = remove_duplicates(tracks)
 
         if 'ratings' in session and playlist_id in session['ratings']:
