@@ -133,7 +133,6 @@ body {
   font-family: 'Circular', 'Poppins', sans-serif;
   color: #fff;
   font-size: 16px;
-  text-align: center;
 }
 
 p, li, a {
@@ -399,7 +398,7 @@ body.fixed-footer {
   font-weight: 700;
   font-size: 2rem;
   text-transform: normal;
-  color: #36324c;
+  color: #36324c !important;
 
 }
 
@@ -450,6 +449,7 @@ body.fixed-footer {
 
 .rate-songs-card .card-body {
   font-size: 0.875rem;
+  text-align: center;
 }
 
 .rating-stars {
@@ -550,7 +550,7 @@ body[data-page="create-playlist"] {
 
 }
 
-.btn-disable {
+.custom-btn .custom-btn-secondary .btn-disable {
   background-color: rgba(169, 169, 169, 0.3) !important;
   color:-internal-light-dark(rgba(16, 16, 16, 0.3); 
   border-radius: 500px;
@@ -625,12 +625,12 @@ body[data-page="create-playlist"] {
 
 
 .btn-login {
-  color: #fff;
+  color: #fff !important;
   background-color: var(--spotify-green);
 }
 
 .btn-login:hover {
-  color: #fff;
+  color: #fff !important;
   background-color: var(--darker-green);
 }
 
