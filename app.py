@@ -125,7 +125,7 @@ def index():
 @app.route('/login')
 def login():
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
+                                               scope=SCOPE,
                                                cache_path=session_cache_path(),
                                                show_dialog=True)
     if request.args.get("code"):
@@ -155,6 +155,7 @@ def logout():
         print("Error: %s - %s." % (e.filename, e.strerror))
     session.clear()
     return redirect('/')
+
 
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
