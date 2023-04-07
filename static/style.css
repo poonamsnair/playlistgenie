@@ -546,27 +546,19 @@ body[data-page="create-playlist"] {
   transition: all 0.3s ease;
 }
 
+.btn-login {
+  color: white !important;
+  background-color: #3cff71 !important;
+}
 
-.btn {
-  border-radius: 500px;
-  -webkit-box-align: center;
-  align-items: center;
-  -webkit-box-pack: center;
-  justify-content: center;
-  display: inline-block;
-  font-weight: 700;
-  text-align: center;
-  vertical-align: middle;
-  user-select: none;
-  padding: 0.375rem 0.75rem;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-
+.btn-login:hover {
+  color: white !important;
+  background-color: #21ff5c !important;
 }
 
 .custom-btn {
   background-color: rgba(169, 169, 169, 0.3) !important;
-  color:-internal-light-dark(rgba(16, 16, 16, 0.3); 
+  color:-internal-light-dark(rgba(16, 16, 16, 0.3) !important; 
   border-radius: 500px;
   -webkit-box-align: center;
   align-items: center;
@@ -581,6 +573,12 @@ body[data-page="create-playlist"] {
   font-size: 1rem;
   transition: all 0.3s ease;
   border: none;
+}
+
+.custom-btn:hover {
+  color: #fff;
+  border: none;
+  transition: all 0.3s ease;
 }
 
 .btn-secondary {
@@ -602,14 +600,6 @@ body[data-page="create-playlist"] {
   border-color: none;
 }
 
-.btn:hover,
-.btn:focus {
-  color: #fff;
-  border: none;
-  outline: none;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
 .btn-secondary:hover,
 .btn-secondary:focus {
   color: #fff;
@@ -617,10 +607,30 @@ body[data-page="create-playlist"] {
   transition: all 0.3s ease;
 }
 
-.custom-btn:hover {
+
+.btn {
+  border-radius: 500px;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  display: inline-block;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+
+}
+
+.btn:hover,
+.btn:focus {
   color: #fff;
   border: none;
-  transition: all 0.3s ease;
+  outline: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .btn:active {
@@ -641,17 +651,6 @@ body[data-page="create-playlist"] {
 
 .btn:focus:not(:active) {
   animation: btn-animation 0.5s ease-in-out;
-}
-
-
-.btn .rounded-pill .btn-login {
-  color: #fff !important;
-  background-color: #3cff71 !important;
-}
-
-.rounded-pill {
-  color: white !important;
-  background-color: #3cff71 !important;
 }
 
 
