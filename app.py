@@ -117,19 +117,17 @@ def get_token():
 
 @app.route('/')
 def index():
+    if not session.get('uuid'):
+        # Step 1. Visitor is unknown, give random ID
+        session['uuid'] = str(uuid.uuid4())
     return render_template('index.html')
 
 @app.route('/login')
 def login():
-    if not session.get('uuid'):
-        # Step 1. Visitor is unknown, give random ID
-        session['uuid'] = str(uuid.uuid4())
-
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
                                                scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
                                                cache_path=session_cache_path(),
                                                show_dialog=True)
-
     if request.args.get("code"):
         # Step 3. Being redirected from Spotify auth page
         auth_manager.get_access_token(request.args.get("code"))
