@@ -137,7 +137,7 @@ def login():
     if not auth_manager.get_cached_token():
         # Step 2. Display sign in link when no token
         auth_url = auth_manager.get_authorize_url()
-        return render_template('sign-in.html', auth_url=auth_url)
+        return render_template('sign_in.html', auth_url=auth_url)
 
     # Step 4. Signed in, redirect to playlists
     return redirect('/playlists')
