@@ -395,7 +395,7 @@ body.fixed-footer {
 /* Rate Playlist page specific styles */
 
 .rate-songs-h1 mb-4 {
-  text-align: center;
+  text-align: center !important;
   margin-bottom: 40px;
   font-weight: 700;
   font-size: 2rem;
@@ -423,8 +423,8 @@ body.fixed-footer {
 }
 
 .body-text {
-  background-color:#36324c;
-  align-items: center;
+  color:#36324c;
+  align-items: center !important;
 }
 
 .rate-songs-card-h1 {
@@ -486,7 +486,7 @@ body.fixed-footer {
 /* Create Playlist page specific styles */
 
 .page-title {
-  text-align: center;
+  text-align: center !important;
   margin-bottom: 40px;
   font-weight: 700;
   font-size: 2rem;
@@ -501,7 +501,7 @@ body[data-page="create-playlist"] {
 
 .custom-form-group label {
   background-color:#36324c;
-  align-items: center;
+  align-items: center !important;
   font-weight: 700;
 }
 
