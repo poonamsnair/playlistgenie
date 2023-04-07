@@ -26,7 +26,7 @@ html, body {
 }
 
 body {
-  background-color: var(--off-white);
+  background-image: linear-gradient(135deg, #E6CEFF 0%, #4300ff 100%);
   margin: 0;
   padding: 0;
   background-repeat: no-repeat;
@@ -172,9 +172,8 @@ h2, h3, h4, h5, h6 {
 
 /* Header and footer styles */
 
-.navbar,
-footer {
-  background-color: var(--dark-green);
+.navbar {
+  background-color:#36324c;
   color: var(--off-white);
 }
 
@@ -343,9 +342,10 @@ body.fixed-footer {
 .playlists-h1 {
   text-align: center;
   margin-bottom: 40px;
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 2rem;
   text-transform: normal;
+  color: #36324c;
 }
 
 .row {
@@ -361,7 +361,7 @@ body.fixed-footer {
 }
 
 .playlist-card {
-  background-color: #000;
+  background-color:#36324c;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
@@ -394,13 +394,23 @@ body.fixed-footer {
 
 /* Rate Playlist page specific styles */
 
+.rate-songs-h1 mb-4 {
+  text-align: center;
+  margin-bottom: 40px;
+  font-weight: 700;
+  font-size: 2rem;
+  text-transform: normal;
+  color: #36324c;
+
+}
+
 .tracks-container {
   display: flex;
   flex-wrap: wrap;
 }
 
 .rate-songs-card {
-  background-color: #000;
+  background-color:#36324c;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.3s ease-in-out, opacity 0.5s ease-in-out;
@@ -410,6 +420,11 @@ body.fixed-footer {
   flex-direction: column;
   align-items: center;
   color: white; 
+}
+
+.body-text {
+  background-color:#36324c;
+  align-items: center;
 }
 
 .rate-songs-card-h1 {
@@ -604,4 +619,11 @@ button:disabled {
 .btn-login:hover {
   color: #fff;
   background-color: var(--darker-green);
+}
+
+/* page nav */
+
+.page-item.active .page-link {
+  background-color: #1cd760;
+  border-color: #1cd760;
 }
