@@ -119,7 +119,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/login')
-def index():
+def login():
     if not session.get('uuid'):
         # Step 1. Visitor is unknown, give random ID
         session['uuid'] = SPOTIPY_CLIENT_ID
