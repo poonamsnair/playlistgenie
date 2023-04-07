@@ -6,7 +6,11 @@
   --light-green: #4ED964;
   --off-white: #F7F7F7;
   --dark-grey: #2C2C2C;
+  --darker-green: #1AA34D;
+  --complementary-purple: #6F3AB3;
+  --darker-purple: #5C2E9A;
 }
+
 
 
 html, body {
@@ -21,15 +25,30 @@ body {
   font-family: 'Nunito Sans', sans-serif;
   background-color: var(--off-white);
   color: var(--dark-grey);
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
+  min-height: 100%;
 }
+
 
 .main-container {
     min-height: calc(100vh - 50px); /* 50px is the height of your footer */
 }
 
+.container {
+  margin: 0 auto;
+  padding: 0;
+}
+
 .header-spacing {
   margin-bottom: 30px;
 }
+
+/*tooltip css*/
 
 .tooltip {
   font-size: 0.875rem;
@@ -63,21 +82,6 @@ body {
   border-left-color: #222;
 }
 
-
-body {
-  margin: 0;
-  padding: 0;
-  font-size: 16px;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  position: relative;
-  min-height: 100%;
-}
-
-.container {
-  margin: 0 auto;
-  padding: 0;
-}
 
 /*mobile css*/
 
@@ -114,34 +118,6 @@ body {
   justify-content: center;
 }
 
-/* Wrapper classes for the container and footer */
-.container-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - 4rem);
-}
-
-.footer-wrapper {
-  margin-top: auto;
-}
-
-body.fixed-footer footer {
-  position: fixed !important;
-  bottom: 0;
-  width: 100%;
-}
-
-body.fixed-footer {
-      background-image: url("/static/images/loginbg.png") !important;
-      background-position: center !important;
-      background-repeat: no-repeat !important;
-      background-size: cover !important;
-    
-}
-.inner-container {
-  padding: 0 20px;
-}
-
 /* Fonts */
 
 h1, h5 {
@@ -156,7 +132,6 @@ p, li, a {
   font-weight: 400;
 }
 
-/* Additional enhancements */
 h2, h3, h4, h5, h6 {
   color: #fff;
   text-transform: uppercase;
@@ -201,6 +176,32 @@ footer {
   padding-top: 20px;
   clear: both;
   z-index: 10 !important;
+}
+.container-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 4rem);
+}
+
+.footer-wrapper {
+  margin-top: auto;
+}
+
+body.fixed-footer footer {
+  position: fixed !important;
+  bottom: 0;
+  width: 100%;
+}
+
+body.fixed-footer {
+      background-image: url("/static/images/loginbg.png") !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-size: cover !important;
+    
+}
+.inner-container {
+  padding: 0 20px;
 }
 
 /* Loader styles */
@@ -342,8 +343,8 @@ footer {
   padding: 10px;
 }
 
-/* Create a gradient background for the playlist card */
 .playlist-card {
+  background-color: #000;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
@@ -357,12 +358,6 @@ footer {
 .playlist-card .card-body {
   padding: 20px;
   text-align: center;
-}
-
-
-.spotify-logo {
-  height: 40px;
-  margin-right: 10px;
 }
 
 .playlist-img {
@@ -386,6 +381,7 @@ footer {
 }
 
 .rate-songs-card {
+  background-color: #000;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   transition: box-shadow 0.3s ease-in-out, opacity 0.5s ease-in-out;
@@ -394,6 +390,7 @@ footer {
   display: flex;
   flex-direction: column;
   align-items: center;
+  color: white; 
 }
 
 .rate-songs-card:hover {
@@ -470,16 +467,11 @@ body[data-page="create-playlist"] {
   border-color: #fff;
 }
 
-/* card */
-
-.btn-green {
-  background-color: #1db954;
-  border-color: #1db954;
-}
+/* card buttons */
 
 .btn-primary {
   color: #fff;
-  background-color: var(--dark-green);
+  background-color: var(--spotify-green);
   border: none;
   transition: all 0.3s ease;
 }
@@ -501,22 +493,23 @@ body[data-page="create-playlist"] {
 }
 
 button:disabled {
-  background-color: rgba(239, 239, 239, 0.3);
-  color: rgba(16, 16, 16, 0.3);
-  border-color: rgba(118, 118, 118, 0.3);
+  background-color: rgba(169, 169, 169, 0.3);
+  color: rgba(169, 169, 169, 0.6);
+  border: 1px solid rgba(169, 169, 169, 0.3);
+  border-radius: 0.25rem;
 }
 
 .btn-secondary {
-  color: var(--dark-green);
-  background-color: transparent;
-  border: 1px solid var(--dark-green);
+  color: #fff;
+  background-color: var(--complementary-purple);
+  border: none;
   transition: all 0.3s ease;
 }
 
 .btn:hover,
 .btn:focus {
   color: #fff;
-  background-color: var(--light-green);
+  background-color: var(--darker-green);
   border: none;
   outline: none;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
@@ -525,7 +518,7 @@ button:disabled {
 .btn-secondary:hover,
 .btn-secondary:focus {
   color: #fff;
-  background-color: var(--dark-green);
+  background-color: var(--darker-purple);
   border: none;
 }
 
