@@ -23,6 +23,7 @@ from math import ceil
 import threading
 from functools import wraps
 import uuid
+from spotipy import Spotify
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
@@ -122,7 +123,7 @@ def index():
 def login():
     if not session.get('uuid'):
         # Step 1. Visitor is unknown, give random ID
-        session['uuid'] = SPOTIPY_CLIENT_ID
+        session['uuid'] = str(uuid.uuid4())
 
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
                                                scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
@@ -132,6 +133,9 @@ def login():
     if request.args.get("code"):
         # Step 3. Being redirected from Spotify auth page
         auth_manager.get_access_token(request.args.get("code"))
+        sp = Spotify(auth_manager=auth_manager)
+        user_info = sp.me()
+        print(f"{user_info['display_name']} ({user_info['id']}) logged in")
         return redirect('/playlists')
 
     if not auth_manager.get_cached_token():
