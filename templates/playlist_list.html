@@ -2,20 +2,20 @@
 
 {% block content %}
 <div class="container content-container">
-    <h1 class="custom-playlist-h1-title">Your Playlists</h1>
+    <h1 class="playlists-h1 mb-4">Your Playlists</h1>
     <div class="row">
         {% for playlist in playlists %}
             {% set unique_track_count = unique_track_counts[playlist['id']] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-                <div class="custom-playlist-card" style="background: linear-gradient(135deg, #121212 0%, #323232 100%); border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
-                    <div class="custom-playlist-card-body">
-                        <h5 class="custom-playlist-card-title">
+                <div class="card playlist-card" style="background: linear-gradient(135deg, #121212 0%, #323232 100%); border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
+                    <div class="card-body">
+                        <h5 class="card-title">
                             {% if playlist['images'] %}
                                 <img src="{{ playlist['images'][0]['url'] }}" class="playlist-img mr-2" alt="{{ playlist['name'] }}" style="border-radius: 50%; width: 60px; height: 60px; object-fit: cover;">
                             {% endif %}
                             {{ playlist['name'] }}
                         </h5>
-                        <p class="custom-playlist-card-text">Tracks: {{ unique_track_count }}</p>
+                        <p class="card-text">Tracks: {{ unique_track_count }}</p>
                         {% if unique_track_count >= 5 and unique_track_count <= 100 %}
                             {% if request.MOBILE %}
                                 <a href="{{ url_for('mobile_rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
