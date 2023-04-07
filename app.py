@@ -163,18 +163,12 @@ def remove_duplicates(tracks):
     return list(unique_tracks.values())
 
 
-def delete_playlist(playlist_id):
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               cache_path=session_cache_path())
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+def delete_playlist(sp, playlist_id):
     user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
-def get_playlist_tracks(playlist_id):
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               cache_path=session_cache_path())
-    sp = spotipy.Spotify(auth_manager=auth_manager)
+def get_playlist_tracks(sp, playlist_id):
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
@@ -204,7 +198,7 @@ def playlists():
     playlist_data = []
     unique_track_counts = {}
     for playlist in all_playlists:
-        tracks = get_playlist_tracks(playlist['id'])
+        tracks = get_playlist_tracks(sp, playlist['id'])
         unique_tracks = remove_duplicates(tracks)
         if len(unique_tracks) >= 1:
             playlist_data.append({
@@ -261,7 +255,7 @@ def rate_playlist(playlist_id):
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
 
     try:
-        tracks = get_playlist_tracks_with_retry(playlist_id)
+        tracks = get_playlist_tracks_with_retry(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
 
         if 'ratings' in session and playlist_id in session['ratings']:
@@ -286,7 +280,7 @@ def mobile_rate_playlist(playlist_id):
         try:
             sp = spotipy.Spotify(auth=session['spotify_token'])
 
-            tracks = get_playlist_tracks_with_retry(sp, playlist_id)
+            tracks = get_playlist_tracks_with_retry(playlist_id)
             unique_tracks = remove_duplicates(tracks)
 
             if 'ratings' in session and playlist_id in session['ratings']:
