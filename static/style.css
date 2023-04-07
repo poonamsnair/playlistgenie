@@ -539,7 +539,6 @@ body[data-page="create-playlist"] {
   justify-content: center;
   display: inline-block;
   font-weight: 700;
-  color: 000;
   text-align: center;
   vertical-align: middle;
   user-select: none;
@@ -626,7 +625,12 @@ body[data-page="create-playlist"] {
 
 .btn .rounded-pill .btn-login {
   color: #fff !important;
-  background-color: var(--spotify-green);
+  background-color: #3cff71 !important;
+}
+
+.rounded-pill {
+  color: white !important;
+  background-color: #3cff71 !important;
 }
 
 .btn .rounded-pill .btn-login:hover {
