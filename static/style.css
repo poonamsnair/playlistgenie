@@ -12,7 +12,6 @@
 }
 
 
-
 html, body {
   height: 100%;
   width: 100%;
@@ -22,12 +21,9 @@ html, body {
 }
 
 body {
-  font-family: 'Nunito Sans', sans-serif;
   background-color: var(--off-white);
-  color: var(--dark-grey);
   margin: 0;
   padding: 0;
-  font-size: 16px;
   background-repeat: no-repeat;
   background-attachment: fixed;
   position: relative;
@@ -122,10 +118,17 @@ body {
 
 h1, h5 {
   font-family: 'Nunito Sans', sans-serif;
+  color: #fff;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
+}
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  color: var(--dark-grey);
+  font-size: 16px;
 }
 
 p, li, a {
@@ -137,6 +140,10 @@ h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5em;
+}
+
+h1{
+  text-transform: uppercase;
 }
 
 p, li {
@@ -478,6 +485,13 @@ body[data-page="create-playlist"] {
 }
 
 .btn {
+  background-color: #1ed760;
+  border-radius: 500px;
+  padding: 14px 32px;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
   display: inline-block;
   font-weight: 400;
   color: white;
@@ -486,32 +500,45 @@ body[data-page="create-playlist"] {
   user-select: none;
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
-  line-height: 1.5;
-  border-radius: 0.25rem;
   transition: all 0.3s ease;
 }
 
 button:disabled {
   background-color: rgba(169, 169, 169, 0.3);
   color: rgba(169, 169, 169, 0.6);
-  border-radius: 0.25rem;
+  border-radius: 500px;
+  padding: 14px 32px;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
   display: inline-block;
   font-weight: 400;
-  color: #212529;
+  color: white;
   text-align: center;
   vertical-align: middle;
   user-select: none;
-  border: 1px solid transparent;
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
-  line-height: 1.5;
   transition: all 0.3s ease;
 }
 
 .btn-secondary {
   color: #fff;
   background-color: var(--complementary-purple);
-  border: none;
+  border-radius: 500px;
+  padding: 14px 32px;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
   transition: all 0.3s ease;
 }
 
