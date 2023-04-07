@@ -125,24 +125,19 @@ html, body {
   font-family: 'Circular', 'Poppins', sans-serif;
 }
 
-
-h1, h5 {
-  font-family: 'Nunito Sans', sans-serif;
-  color: #fff;
-}
-
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
+  color: #fff;
 }
 
 body {
   font-family: 'Circular', 'Poppins', sans-serif;
-  color: var(--dark-grey);
+  color: #fff;
   font-size: 16px;
 }
 
 p, li, a {
-  font-weight: 400;
+  font-weight: 700;
 }
 
 h2, h3, h4, h5, h6 {
@@ -154,6 +149,7 @@ h2, h3, h4, h5, h6 {
 
 h1{
   text-transform: uppercase;
+  font-size: 2rem;
 }
 
 p, li {
@@ -345,7 +341,8 @@ body.fixed-footer {
   text-align: center;
   margin-bottom: 40px;
   font-weight: 600;
-  font-size: 2rem;
+  font-size: 1rem;
+  text-transform: normal;
 }
 
 .row {
@@ -376,6 +373,7 @@ body.fixed-footer {
 .playlist-card .card-body {
   padding: 20px;
   text-align: center;
+  font-size: 0.875rem;
 }
 
 .playlist-img {
@@ -411,6 +409,11 @@ body.fixed-footer {
   color: white; 
 }
 
+.rate-songs-card-h1 {
+  text-transform: normal;
+  font-size: 1rem;
+}
+
 .rate-songs-card:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
@@ -425,6 +428,10 @@ body.fixed-footer {
   padding: 20px;
   background-color: transparent;
   color: #fff;
+}
+
+.rate-songs-card .card-body {
+  font-size: 0.875rem;
 }
 
 .rating-stars {
