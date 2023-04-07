@@ -298,7 +298,6 @@ def save_ratings(playlist_id):
             ratings[track_id] = 5
     session['ratings'] = ratings
     session['playlist_id'] = playlist_id
-    session['from_save_ratings'] = True
     return redirect(url_for('create_playlist', playlist_id=playlist_id))
     
     
@@ -310,12 +309,6 @@ def create_playlist(playlist_id):
     if not auth_manager.get_cached_token():
         print("No cached token found, redirecting to /")
         return redirect('/')
-    if not session.get('from_save_ratings'):
-        print("from_save_ratings not found in session, redirecting to index")
-        return redirect(url_for('index'))
-    else:
-        session.pop('from_save_ratings', None)
-        print("from_save_ratings found in session, continuing")
     sp = spotipy.Spotify(auth_manager=auth_manager)
     if request.method == 'POST':
         print("POST request detected")
