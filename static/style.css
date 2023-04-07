@@ -148,7 +148,6 @@ h2, h3, h4, h5, h6 {
 }
 
 h1{
-  text-transform: uppercase;
   font-size: 2rem;
 }
 
@@ -328,6 +327,10 @@ body.fixed-footer {
     color: #1DB954 !important;
   }
 
+  .navbar-brand {
+    font-size: 2rem;
+    font-weight: 700;
+}
 
 /* Playlist page specific styles */
 
@@ -504,7 +507,6 @@ body[data-page="create-playlist"] {
 .btn {
   background-color: #1ed760;
   border-radius: 500px;
-  padding: 14px 32px;
   -webkit-box-align: center;
   align-items: center;
   -webkit-box-pack: center;
@@ -518,24 +520,22 @@ body[data-page="create-playlist"] {
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
   transition: all 0.3s ease;
-  text-transform: uppercase;
+
 }
 
 button:disabled {
   background-color: rgba(169, 169, 169, 0.3);
-  color: rgba(169, 169, 169, 0.6);
   border-radius: 500px;
-  padding: 14px 32px;
   -webkit-box-align: center;
   align-items: center;
   -webkit-box-pack: center;
   justify-content: center;
   display: inline-block;
-  font-weight: 500;
+  font-weight: 700;
   text-align: center;
   vertical-align: middle;
   user-select: none;
-  padding: 0.375rem 0.75rem;
+  padding: 0.375rem 0.75rem !important;
   font-size: 1rem;
   transition: all 0.3s ease;
   text-transform: uppercase;
@@ -545,7 +545,6 @@ button:disabled {
   color: #000;
   background-color: var(--complementary-purple);
   border-radius: 500px;
-  padding: 14px 32px;
   -webkit-box-align: center;
   align-items: center;
   -webkit-box-pack: center;
@@ -558,7 +557,6 @@ button:disabled {
   padding: 0.375rem 0.75rem;
   font-size: 1rem;
   transition: all 0.3s ease;
-  text-transform: uppercase;
 }
 
 .btn:hover,
@@ -601,11 +599,9 @@ button:disabled {
 .btn-login {
   color: #fff;
   background-color: var(--spotify-green);
-  text-transform: uppercase;
 }
 
 .btn-login:hover {
   color: #fff;
   background-color: var(--darker-green);
-  text-transform: uppercase;
 }
