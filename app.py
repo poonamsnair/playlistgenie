@@ -109,12 +109,6 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
     return render_template('error.html', error_code=error_code), error_code
 
-
-def get_token():
-    if 'token' not in session:
-        return None
-    return session['token']
-
 @app.route('/')
 def index():
     if not session.get('uuid'):
@@ -135,12 +129,10 @@ def login():
         user_info = sp.me()
         print(f"{user_info['display_name']} ({user_info['id']}) logged in")
         return redirect('/playlists')
-
     if not auth_manager.get_cached_token():
         # Step 2. Display sign in link when no token
         auth_url = auth_manager.get_authorize_url()
         return redirect(auth_url)
-
     # Step 4. Signed in, redirect to playlists
     return redirect('/playlists')
 
@@ -191,10 +183,8 @@ def playlists():
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
     user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
-
     total_playlists = user_playlists['total']
     all_playlists = user_playlists['items']
-
     playlist_data = []
     unique_track_counts = {}
     for playlist in all_playlists:
@@ -209,7 +199,6 @@ def playlists():
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
             })
             unique_track_counts[playlist['id']] = len(unique_tracks)
-
     paginated_playlists = paginate_playlists(playlist_data, limit, offset)
     playlist_id = request.args.get('playlist_id', None)
 
@@ -248,23 +237,17 @@ def rate_playlist(playlist_id):
                                                cache_path=session_cache_path())
     if not auth_manager.get_cached_token():
         return redirect('/')
-
     sp = spotipy.Spotify(auth_manager=auth_manager)
-
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
-
     try:
         tracks = get_playlist_tracks_with_retry(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
-
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', playlist_id=playlist_id))
-
         for track in unique_tracks:
             track_info = sp_track_with_retry(sp, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
-
         # Render the template without the access token
         return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)
     except Exception as e:
@@ -273,102 +256,101 @@ def rate_playlist(playlist_id):
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 def mobile_rate_playlist(playlist_id):
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-    
-    if session.get('spotify_token'):
-        try:
-            sp = spotipy.Spotify(auth=session['spotify_token'])
-
-            tracks = get_playlist_tracks_with_retry(playlist_id)
-            unique_tracks = remove_duplicates(tracks)
-
-            if 'ratings' in session and playlist_id in session['ratings']:
-                return redirect(url_for('recommendation', playlist_id=playlist_id))
-
-            for track in unique_tracks:
-                track_info = sp_track_with_retry(sp, track['track']['id'])
-                track['spotify_uri'] = track_info['uri']
-
-            # Add the access token to the context
-            return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
-        except Exception as e:
-            return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
-    else:
-        return redirect(url_for('index'))
+    try:
+        tracks = get_playlist_tracks_with_retry(sp, playlist_id)
+        unique_tracks = remove_duplicates(tracks)
+        if 'ratings' in session and playlist_id in session['ratings']:
+            return redirect(url_for('recommendation', playlist_id=playlist_id))
+        for track in unique_tracks:
+            track_info = sp_track_with_retry(sp, track['track']['id'])
+            track['spotify_uri'] = track_info['uri']
+        # Render the template without the access token
+        return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)
+    except Exception as e:
+        return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
 
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
 def save_ratings(playlist_id):
-    if session.get('spotify_token'):
-        sp = spotipy.Spotify(auth=session['spotify_token'])
-        playlist = sp.playlist(playlist_id)
-        tracks = playlist['tracks']['items']
-        ratings = {}
-        for track in tracks:
-            track_id = track['track']['id']
-            rating = request.form.get(f'rating-{track_id}')
-            # Set the default rating to 5 if no rating is given
-            if rating:
-                ratings[track_id] = int(rating)
-            else:
-                ratings[track_id] = 5
-        session['ratings'] = ratings
-        session['playlist_id'] = playlist_id
-        session['from_save_ratings'] = True
-        return redirect(url_for('create_playlist', playlist_id=playlist_id))
-    else:
-        return redirect(url_for('index'))
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
+    sp = spotipy.Spotify(auth_manager=auth_manager)
+    playlist = sp.playlist(playlist_id)
+    tracks = playlist['tracks']['items']
+    ratings = {}
+    for track in tracks:
+        track_id = track['track']['id']
+        rating = request.form.get(f'rating-{track_id}')
+        # Set the default rating to 5 if no rating is given
+        if rating:
+            ratings[track_id] = int(rating)
+        else:
+            ratings[track_id] = 5
+    session['ratings'] = ratings
+    session['playlist_id'] = playlist_id
+    session['from_save_ratings'] = True
+    return redirect(url_for('create_playlist', playlist_id=playlist_id))
     
     
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
 def create_playlist(playlist_id):
-    if not session.get('spotify_token'):
-        return redirect(url_for('index'))   
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
     if not session.get('from_save_ratings'):
         return redirect(url_for('index'))
     else:
         session.pop('from_save_ratings', None)
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     if request.method == 'POST':
         playlist_name = request.form['playlist_name']
         if not playlist_name:
             return render_template('error.html', message="Playlist name cannot be empty.")
         elif len(playlist_name) > 100:
             return render_template('error.html', message="Playlist name is too long.")
-
         # Save the playlist name and ID in the session
         session['rec_playlist_name'] = playlist_name
-        sp = spotipy.Spotify(auth=session['spotify_token'])
         user_id = sp.me()['id']
         rec_playlist = sp.user_playlist_create(user=user_id, name=playlist_name)
         rec_playlist_id = rec_playlist['id']
         session['rec_playlist_id'] = rec_playlist_id
-
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
-
     return render_template('create_playlist.html', playlist_id=playlist_id)
-
 
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
 def recommendation(playlist_id, rec_playlist_id):
-    if session.get('spotify_token'):
-        spotify_token = session['spotify_token']
-        ratings = session['ratings']
-        spotify_username = session['spotify_username']
-        request_id = str(uuid.uuid4())
-        threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username)).start()
-        return render_template("recommendation_progress.html", request_id=request_id)
-    else:
-        return redirect(url_for("index"))
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
+
+    sp = spotipy.Spotify(auth_manager=auth_manager)
+    user_id = sp.me()['id']
+    session['spotify_username'] = user_id
+
+    ratings = session['ratings']
+    request_id = str(uuid.uuid4())
+    threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
+    return render_template("recommendation_progress.html", request_id=request_id)
 
     
-def background_recommendation(playlist_id, rec_playlist_id, request_id, spotify_token, ratings, spotify_username):
+def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
-    sp = spotipy.Spotify(auth=spotify_token)
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
     if not ratings:
