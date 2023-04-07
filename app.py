@@ -175,17 +175,17 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(playlist_id):
-    sp = create_spotify_instance()
-    if sp is None:
-        return
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     user_id = sp.current_user()["id"]
     user_id = sp.me()['id']
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(playlist_id):
-    sp = create_spotify_instance()
-    if sp is None:
-        return
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     return playlist['tracks']['items']
 
@@ -197,9 +197,11 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
 
 @app.route('/playlists/')
 def playlists():
-    sp = create_spotify_instance()
-    if sp is None:
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
         return redirect('/')
+    sp = spotipy.Spotify(auth_manager=auth_manager)
     limit = 12
     offset = int(request.args.get('offset', 0))
     previous_offset = max(offset - limit, 0)
