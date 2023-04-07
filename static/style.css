@@ -531,6 +531,22 @@ body[data-page="create-playlist"] {
   transition: all 0.3s ease;
 }
 
+.btn-primary:hover {
+  background-color: #1ed760 !important;
+  color:white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-playlist {
+  background-color: #1ed760;
+  color: #000;
+  background-color: var(--spotify-green);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+
 .btn {
   border-radius: 500px;
   -webkit-box-align: center;
@@ -589,7 +605,6 @@ body[data-page="create-playlist"] {
 .btn:hover,
 .btn:focus {
   color: #fff;
-  background-color: var(--darker-green);
   border: none;
   outline: none;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
@@ -598,8 +613,14 @@ body[data-page="create-playlist"] {
 .btn-secondary:hover,
 .btn-secondary:focus {
   color: #fff;
-  background-color: var(--darker-purple);
   border: none;
+  transition: all 0.3s ease;
+}
+
+.custom-btn:hover {
+  color: #fff;
+  border: none;
+  transition: all 0.3s ease;
 }
 
 .btn:active {
