@@ -99,7 +99,6 @@ body {
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
-        max-width: 250px; /* Adjust this value according to your design */
     }
 
 @media (max-width: 767px) {
@@ -142,7 +141,6 @@ p, li, a {
 
 h2, h3, h4, h5, h6 {
   color: #fff;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5em;
 }
@@ -407,6 +405,7 @@ body.fixed-footer {
 .tracks-container {
   display: flex;
   flex-wrap: wrap;
+  text-align: center !important; 
 }
 
 .rate-songs-card {
