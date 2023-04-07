@@ -154,17 +154,6 @@ def logout():
     session.clear()
     return redirect('/')
 
-def create_spotify_instance():
-    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
-                                               scope='user-read-currently-playing playlist-modify-private user-modify-playback-state',
-                                               cache_path=session_cache_path())
-
-    if not auth_manager.get_cached_token():
-        return None
-
-    return spotipy.Spotify(auth_manager=auth_manager)
-
-
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
     for track in tracks:
@@ -261,29 +250,31 @@ def sp_track_with_retry(sp, track_id):
 
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 def rate_playlist(playlist_id):
+    auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
+                                               cache_path=session_cache_path())
+    if not auth_manager.get_cached_token():
+        return redirect('/')
+
+    sp = spotipy.Spotify(auth_manager=auth_manager)
+
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', playlist_id=playlist_id))
-    
-    if session.get('spotify_token'):
-        try:
-            sp = spotipy.Spotify(auth=session['spotify_token'])
 
-            tracks = get_playlist_tracks_with_retry(sp, playlist_id)
-            unique_tracks = remove_duplicates(tracks)
+    try:
+        tracks = get_playlist_tracks_with_retry(sp, playlist_id)
+        unique_tracks = remove_duplicates(tracks)
 
-            if 'ratings' in session and playlist_id in session['ratings']:
-                return redirect(url_for('recommendation', playlist_id=playlist_id))
+        if 'ratings' in session and playlist_id in session['ratings']:
+            return redirect(url_for('recommendation', playlist_id=playlist_id))
 
-            for track in unique_tracks:
-                track_info = sp_track_with_retry(sp, track['track']['id'])
-                track['spotify_uri'] = track_info['uri']
-                
-            # Add the access token to the context
-            return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, access_token=session['spotify_token'])
-        except Exception as e:
-            return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
-    else:
-        return redirect(url_for('index'))
+        for track in unique_tracks:
+            track_info = sp_track_with_retry(sp, track['track']['id'])
+            track['spotify_uri'] = track_info['uri']
+
+        # Render the template without the access token
+        return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id)
+    except Exception as e:
+        return render_template('error.html', message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
 
 
 @app.route('/mobile_rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
