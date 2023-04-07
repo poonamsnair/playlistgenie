@@ -156,11 +156,6 @@ p, li, a {
   font-weight: 400;
 }
 
-/* Text shadows */
-h1 {
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
 /* Additional enhancements */
 h2, h3, h4, h5, h6 {
   color: #fff;
@@ -206,30 +201,6 @@ footer {
   padding-top: 20px;
   clear: both;
   z-index: 10 !important;
-}
-
-/* Button styles */
-.btn-playlist {
-  background-color: #1DB954 !important;
-  color: #fff !important;
-}
-
-.btn-playlist:hover {
-  background-color: #18a64d !important;
-  color: #fff;
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2) !important;
-}
-
-.btn-login {
-  background-color: #1DB954 !important;
-  color: #fff !important;
-  border: none;
-}
-
-.btn-login:hover {
-  background-color: #17a74a !important;
-  color: #fff !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 /* Loader styles */
@@ -311,21 +282,11 @@ footer {
   align-items: center;
 }
 
-.btn-green {
-  background-color: #1db954;
-  border-color: #1db954;
-}
-
 
 .sign-up-options {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.btn-green {
-  background-color: #1db954;
-  border-color: #1db954;
 }
 
 .spotify-logo {
@@ -353,8 +314,6 @@ footer {
     color: #1DB954 !important;
   }
 
-
-/* Playlist page specific styles */
 
 /* Playlist page specific styles */
 
@@ -513,15 +472,79 @@ body[data-page="create-playlist"] {
 
 /* card */
 
-button,
-.card {
+.btn-green {
+  background-color: #1db954;
+  border-color: #1db954;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: var(--dark-green);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  color: #212529;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+button:disabled {
+  background-color: rgba(239, 239, 239, 0.3);
+  color: rgba(16, 16, 16, 0.3);
+  border-color: rgba(118, 118, 118, 0.3);
+}
+
+.btn-secondary {
+  color: var(--dark-green);
+  background-color: transparent;
+  border: 1px solid var(--dark-green);
+  transition: all 0.3s ease;
+}
+
+.btn:hover,
+.btn:focus {
+  color: #fff;
   background-color: var(--light-green);
-  color: var(--dark-grey);
+  border: none;
+  outline: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  color: #fff;
+  background-color: var(--dark-green);
   border: none;
 }
 
-button:hover,
-.card:hover {
-  background-color: var(--spotify-green);
-  color: var(--off-white);
+.btn:active {
+  transform: scale(0.98);
+}
+
+@keyframes btn-animation {
+  0% {
+      transform: scale(1);
+  }
+  50% {
+      transform: scale(1.05);
+  }
+  100% {
+      transform: scale(1);
+  }
+}
+
+.btn:focus:not(:active) {
+  animation: btn-animation 0.5s ease-in-out;
 }
