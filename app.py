@@ -304,16 +304,21 @@ def save_ratings(playlist_id):
     
 @app.route('/create_playlist/<playlist_id>/', methods=['GET', 'POST'])
 def create_playlist(playlist_id):
+    print("Entering create_playlist route")
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
                                                cache_path=session_cache_path())
     if not auth_manager.get_cached_token():
+        print("No cached token found, redirecting to /")
         return redirect('/')
     if not session.get('from_save_ratings'):
+        print("from_save_ratings not found in session, redirecting to index")
         return redirect(url_for('index'))
     else:
         session.pop('from_save_ratings', None)
+        print("from_save_ratings found in session, continuing")
     sp = spotipy.Spotify(auth_manager=auth_manager)
     if request.method == 'POST':
+        print("POST request detected")
         playlist_name = request.form['playlist_name']
         if not playlist_name:
             return render_template('error.html', message="Playlist name cannot be empty.")
@@ -325,9 +330,10 @@ def create_playlist(playlist_id):
         rec_playlist = sp.user_playlist_create(user=user_id, name=playlist_name)
         rec_playlist_id = rec_playlist['id']
         session['rec_playlist_id'] = rec_playlist_id
+        print(f"Redirecting to recommendation route with playlist_id: {playlist_id}, rec_playlist_id: {rec_playlist_id}")
         return redirect(url_for('recommendation', playlist_id=playlist_id, rec_playlist_id=rec_playlist_id))
+    print("GET request detected, rendering create_playlist.html")
     return render_template('create_playlist.html', playlist_id=playlist_id)
-
 
 
 @app.route('/recommendation/<playlist_id>/<rec_playlist_id>/')
@@ -336,7 +342,6 @@ def recommendation(playlist_id, rec_playlist_id):
                                                cache_path=session_cache_path())
     if not auth_manager.get_cached_token():
         return redirect('/')
-
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user_id = sp.me()['id']
     session['spotify_username'] = user_id
