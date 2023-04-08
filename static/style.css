@@ -402,6 +402,7 @@ body.fixed-footer {
 .row {
   display: flex;
   flex-wrap: wrap;
+  margin-top: 50px; 
 }
 
 .col-md-4 {
