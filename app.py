@@ -293,10 +293,6 @@ def mobile_rate_playlist(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
-    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
-    if check_result['status'] == "error":
-        message = check_result['message']
-        return render_template('error.html', username=username, message=message)
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', username=username, playlist_id=playlist_id))
     try:
@@ -324,11 +320,6 @@ def save_ratings(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
-    # Check if the playlist exists and hasn't been modified
-    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
-    if check_result['status'] == "error":
-        message = check_result['message']
-        return render_template('error.html', username=username, message=message)
     tracks = playlist['tracks']['items']
     ratings = {}
     for track in tracks:
@@ -356,10 +347,6 @@ def create_playlist(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
-    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
-    if check_result['status'] == "error":
-        message = check_result['message']
-        return render_template('error.html', username=username, message="Deleted or modified playlist mid process. Please try again.")
     if request.method == 'POST':
         print("POST request detected")
         playlist_name = request.form['playlist_name']
