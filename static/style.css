@@ -541,8 +541,14 @@ body[data-page="create-playlist"] {
 }
 
 .btn-primary:hover {
-  background-color: #1ed760 !important;
-  color:white;
+  background-color: #11c551!important;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:disabled {
+  background-color: rgba(169, 169, 169, 0.3) !important;
+  color:#b3b3b3 !important;
   border: none;
   transition: all 0.3s ease;
 }
@@ -566,7 +572,7 @@ body[data-page="create-playlist"] {
 }
 
 .btn-login:hover {
-  background-color: #02c236 !important;
+  background-color: #11c551!important;
   border: none;
 }
 
@@ -598,7 +604,7 @@ body[data-page="create-playlist"] {
 
 .btn-back {
   color: #000 !important;
-  background-color: #b79fff !important;
+  background-color: #e3daff !important;
   border-radius: 500px;
   -webkit-box-align: center;
   align-items: center;
@@ -619,9 +625,9 @@ body[data-page="create-playlist"] {
 
 .btn-back:hover,
 .btn-back:focus {
-  color: #fff;
   border: none;
   transition: all 0.3s ease;
+  background-color: #baa4ff !important;
 }
 
 
@@ -644,7 +650,6 @@ body[data-page="create-playlist"] {
 
 .btn:hover,
 .btn:focus {
-  color: #fff;
   border: none;
   outline: none;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
