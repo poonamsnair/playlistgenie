@@ -264,28 +264,15 @@ body.fixed-footer footer {
 } */
 @keyframes gradient-animation {
   0%, 100% {
-    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
-    background-size: 600% 600%;
-    background-position: 0% 100%;
-  }
-  25% {
-    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
-    background-size: 600% 600%;
-    background-position: 100% 0%;
+    background-position: 0% 50%;
   }
   50% {
-    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
-    background-size: 600% 600%;
-    background-position: 100% 100%;
-  }
-  75% {
-    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
-    background-size: 600% 600%;
-    background-position: 0% 0%;
+    background-position: 100% 50%;
   }
 }
 
 body.fixed-footer {
+  background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
   animation: gradient-animation 30s ease infinite;
 }
 
