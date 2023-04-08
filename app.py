@@ -103,6 +103,7 @@ def inject_vars():
 # Custom error handler for your Flask app
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
+    username = session.get('username', 'Unknown User')
     # Log the unhandled exception with its details
     logging.exception('Unhandled exception: %s', e)
     
@@ -110,7 +111,7 @@ def handle_unhandled_exception(e):
     error_code = getattr(e, 'code', 500)
 
     # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
-    return render_template('error.html', error_code=error_code), error_code
+    return render_template('error.html', username=username, error_code=error_code), error_code
 
 @app.route('/')
 def index():
@@ -349,7 +350,7 @@ def recommendation(playlist_id, rec_playlist_id):
     username = user_profile['display_name'] 
     user_id = sp.me()['id']
     session['spotify_username'] = user_id
-
+    session['username'] = username
     ratings = session['ratings']
     request_id = str(uuid.uuid4())
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
