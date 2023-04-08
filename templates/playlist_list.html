@@ -8,7 +8,10 @@
             {% set unique_track_count = unique_track_counts[playlist['id']] %}
             {% set is_new_playlist = request.args.get('new_playlist') == playlist['id'] %}
             <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
-                <div class="card playlist-card {{ 'newly-created' if is_new_playlist }}" style="border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
+                <div class="card playlist-card {{ 'newly-created' if is_new_playlist }}"
+                    data-playlist-id="{{ playlist['id'] }}"
+                    data-spotify-url="{{ playlist['external_urls']['spotify'] }}"
+                    style="border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); transition: box-shadow 0.3s ease-in-out;">
                     <div class="card-body">
                         <h5 class="card-title">
                             {% if playlist['images'] %}
@@ -28,6 +31,7 @@
                         {% else %}
                             <button class="custom-btn custom-btn-secondary btn-disable" role="button" data-toggle="tooltip" data-placement="top" title="This playlist has more than 100 unique tracks">Rate Playlist</button>
                         {% endif %}
+                        <a href="{{ playlist['external_urls']['spotify'] }}" target="_blank" class="btn btn-success mt-2">View on Spotify</a>
                     </div>
                 </div>
             </div>
@@ -52,19 +56,19 @@
 {% endblock %}
 
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const newPlaylistId = urlParams.get("new_playlist");
-  
-      if (newPlaylistId) {
+document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const newPlaylistId = urlParams.get("new_playlist");
+
+    if (newPlaylistId) {
         const playlistCards = document.querySelectorAll(".playlist-card");
-  
+
         playlistCards.forEach(card => {
-          if (card.dataset.playlistId === newPlaylistId) {
-            card.classList.add("newly-created-card");
-          }
+            if (card.dataset.playlistId === newPlaylistId) {
+                card.classList.add("newly-created-card");
+            }
         });
-      }
-    });
+    }
+});
   </script>
   

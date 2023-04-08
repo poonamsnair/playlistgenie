@@ -203,6 +203,7 @@ def playlists():
                 'images': playlist['images'],  # Add the playlist images
                 'unique_track_count': len(unique_tracks),
                 'image_url': playlist['images'][0]['url'] if playlist['images'] else None,
+                'external_urls': playlist['external_urls']
             })
             unique_track_counts[playlist['id']] = len(unique_tracks)
 
