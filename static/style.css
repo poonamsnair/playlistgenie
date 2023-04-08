@@ -810,14 +810,6 @@ body[data-page="create-playlist"] {
  font-size: 7em !important; 
 }
 
-.page-link {
-  color: #000 !important;
-}
-
-.page-link:hover {
-    color: #8a62d5 !important;
-}
-
 .page-item.disabled {
   pointer-events: none; /* Disable clicks */
   cursor: not-allowed; /* Show not-allowed cursor */
@@ -827,4 +819,12 @@ body[data-page="create-playlist"] {
 .page-item.page-item-back.disabled {
   color: #999 !important; /* Gray text color */
   background-color: #eee !important; /* Light gray background color */
+}
+
+.page-link {
+  color: #000 !important;
+}
+
+.page-link:hover {
+    color: #8a62d5 !important;
 }
