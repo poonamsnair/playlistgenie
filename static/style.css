@@ -255,13 +255,35 @@ body.fixed-footer footer {
   width: 100%;
 }
 
-body.fixed-footer {
+/*body.fixed-footer {
       background-image: url("/static/images/loginbg.png") !important;
       background-position: center !important;
       background-repeat: no-repeat !important;
       background-size: cover !important;
     
+} */
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
+
+body.fixed-footer {
+  background: linear-gradient(270deg, #E6CEFF, #4300ff);
+  animation: gradient-animation 15s ease infinite;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+
+}
+
+
 .inner-container {
   padding: 0 20px;
 }
