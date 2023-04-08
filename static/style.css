@@ -262,42 +262,32 @@ body.fixed-footer footer {
       background-size: cover !important;
     
 } */
-@keyframes wave {
-  0% {
-    transform: translateY(0) translateX(0);
+@keyframes gradient-animation {
+  0%, 100% {
+    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
+    background-size: 600% 600%;
+    background-position: 0% 100%;
   }
   25% {
-    transform: translateY(10px) translateX(10px);
+    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
+    background-size: 600% 600%;
+    background-position: 100% 0%;
   }
   50% {
-    transform: translateY(0) translateX(20px);
+    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
+    background-size: 600% 600%;
+    background-position: 100% 100%;
   }
   75% {
-    transform: translateY(-10px) translateX(10px);
-  }
-  100% {
-    transform: translateY(0) translateX(0);
+    background: linear-gradient(45deg, #9b59b6, #3498db, #2ecc71);
+    background-size: 600% 600%;
+    background-position: 0% 0%;
   }
 }
 
 body.fixed-footer {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(270deg, #E6CEFF, #4300ff);
-  animation: gradient-animation 15s ease infinite;
+  animation: gradient-animation 30s ease infinite;
 }
-
-body.fixed-footer::before {
-  content: "";
-  position: absolute;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent);
-  background-size: 20px 40px;
-  animation: wave 4s linear infinite;
-  opacity: 0.5;
-}
-
 
 
 .inner-container {
