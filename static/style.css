@@ -810,15 +810,12 @@ body[data-page="create-playlist"] {
  font-size: 7em !important; 
 }
 
-.page-item.disabled {
-  pointer-events: none; /* Disable clicks */
-  cursor: not-allowed; /* Show not-allowed cursor */
-}
 
-.page-item.page-item-next.disabled,
-.page-item.page-item-back.disabled {
+.page-link:disabled {
   color: #999 !important; /* Gray text color */
   background-color: #eee !important; /* Light gray background color */
+  pointer-events: none; /* Disable clicks */
+  cursor: not-allowed; /* Show not-allowed cursor */
 }
 
 .page-link {
