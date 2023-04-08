@@ -399,7 +399,10 @@ body.fixed-footer {
 }
 
 /* Rate Playlist page specific styles */
-
+.mb-4 {
+  text-align: center !important;
+  color: #36324c !important;
+}
 .rate-songs-h1 .mb-4 {
   text-align: center !important;
   margin-bottom: 40px;
@@ -629,6 +632,7 @@ body[data-page="create-playlist"] {
   transition: all 0.3s ease;
   background-color: #baa4ff !important;
   color: #000 !important;
+  border: none !important;
 }
 
 
@@ -676,3 +680,9 @@ body[data-page="create-playlist"] {
   animation: btn-animation 0.5s ease-in-out;
 }
 
+/* recommendations */
+.status-message {
+  color:#36324c !important;
+  text-align: center !important;
+
+}
