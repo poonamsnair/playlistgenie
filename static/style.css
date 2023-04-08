@@ -512,7 +512,9 @@ body[data-page="create-playlist"] {
 .custom-form-group label {
   color:#36324c;
   align-items: center !important;
+  text-align: center !important
   font-weight: 700;
+  display: block;
 }
 
 .custom-form-control {
@@ -685,4 +687,12 @@ body[data-page="create-playlist"] {
   color:#36324c !important;
   text-align: center !important;
 
+}
+.progress-bar {
+  background-color: #3cff71 !important;
+}
+
+.progress-bar-striped {
+  background-image: linear-gradient(45deg,rgba(13, 255, 0, 0.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+  background-size: 1rem 1rem;
 }

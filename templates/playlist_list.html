@@ -15,7 +15,7 @@
                             {% endif %}
                             {{ playlist['name'] }}
                         </h5>
-                        <p class="card-text">Tracks: {{ unique_track_count }}</p>
+                        <p class="card-text">{{ unique_track_count }} Tracks</p>
                         {% if unique_track_count >= 5 and unique_track_count <= 100 %}
                             {% if request.MOBILE %}
                                 <a href="{{ url_for('mobile_rate_playlist', playlist_id=playlist['id']) }}" class="btn btn-primary" role="button" data-toggle="tooltip" data-placement="top" title="Rate Playlist">Rate Playlist</a>
