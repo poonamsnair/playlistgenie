@@ -106,12 +106,15 @@ def handle_unhandled_exception(e):
     username = session.get('username', 'Unknown User')
     # Log the unhandled exception with its details
     logging.exception('Unhandled exception: %s', e)
-    
+
     # If the exception has an attribute 'code', use it; otherwise, set the default error code to 500 (Internal Server Error)
     error_code = getattr(e, 'code', 500)
 
-    # Render the 'error.html' template with the specified error code and return it along with the error code as HTTP status code
-    return render_template('error.html', username=username, error_code=error_code), error_code
+    # Get the error message from the exception, if available, or use a default message
+    message = getattr(e, 'description', 'An unexpected error occurred. Please try again later.')
+
+    # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
+    return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
 @app.route('/')
 def index():
@@ -192,7 +195,7 @@ def check_playlist_before_submit(sp, playlist_id, initial_tracks):
             "message": "The playlist has been modified. Please refresh the page to load the updated playlist.",
         }
 
-    return {"status": "success"}
+    return {"status": "success", "message": "Playlist is ready for submission."}
 
 @app.route('/playlists/')
 def playlists():
@@ -263,6 +266,11 @@ def rate_playlist(playlist_id):
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
+    playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message=message)
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', username=username, playlist_id=playlist_id))
     try:
@@ -288,6 +296,11 @@ def mobile_rate_playlist(playlist_id):
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
+    playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message=message)
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', username=username, playlist_id=playlist_id))
     try:
@@ -315,12 +328,11 @@ def save_ratings(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
-    
     # Check if the playlist exists and hasn't been modified
     check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
     if check_result['status'] == "error":
         message = check_result['message']
-        return render_template('error.html', username=username, message="Deleted or modified playlist mid process. Please try again.")
+        return render_template('error.html', username=username, message=message)
     tracks = playlist['tracks']['items']
     ratings = {}
     for track in tracks:
