@@ -23,6 +23,7 @@
 .page-item.active .page-link {
   background-color: #1cd760 !important;
   border-color: #1cd760 !important;
+  color: black!important;
 }
 
 html, body {
@@ -399,7 +400,7 @@ body.fixed-footer {
 
 /* Rate Playlist page specific styles */
 
-.rate-songs-h1 mb-4 {
+.rate-songs-h1 .mb-4 {
   text-align: center !important;
   margin-bottom: 40px;
   font-weight: 700;
@@ -429,8 +430,8 @@ body.fixed-footer {
 }
 
 .body-text {
-  color:#36324c;
-  align-items: center !important;
+  color:#36324c !important;
+  text-align: center !important;
 }
 
 .rate-songs-card-h1 {
@@ -542,6 +543,7 @@ body[data-page="create-playlist"] {
 
 .btn-primary:hover {
   background-color: #11c551!important;
+  color: #000 !important;
   border: none;
   transition: all 0.3s ease;
 }
@@ -554,8 +556,6 @@ body[data-page="create-playlist"] {
 }
 
 .btn-playlist {
-  background-color: #1ed760;
-  color: #000;
   border: none;
   transition: all 0.3s ease;
   font-family: 'Circular', 'Poppins', sans-serif;
@@ -628,6 +628,7 @@ body[data-page="create-playlist"] {
   border: none;
   transition: all 0.3s ease;
   background-color: #baa4ff !important;
+  color: #000 !important;
 }
 
 
