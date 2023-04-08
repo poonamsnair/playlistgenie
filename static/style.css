@@ -526,7 +526,7 @@ body[data-page="create-playlist"] {
 button:not(:disabled) {
   cursor: pointer;
   background-color: rgba(169, 169, 169, 0.3) !important;
-  color:-internal-light-dark(rgba(16, 16, 16, 0.3) !important; 
+  color:#b3b3b3 !important; 
   border-radius: 500px;
   -webkit-box-align: center;
   align-items: center;
@@ -589,7 +589,7 @@ button:not(:disabled) {
 
 .custom-btn {
   background-color: rgba(169, 169, 169, 0.3) !important;
-  color:-internal-light-dark(rgba(16, 16, 16, 0.3) !important; 
+  color:#b3b3b3 !important
   border-radius: 500px;
   -webkit-box-align: center;
   align-items: center;
