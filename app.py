@@ -174,6 +174,26 @@ def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
     end = offset + limit
     return playlists[start:end]
 
+def check_playlist_before_submit(sp, playlist_id, initial_tracks):
+    # Fetch the current playlist
+    current_playlist = sp.playlist(playlist_id)
+
+    # Check if the playlist still exists
+    if not current_playlist:
+        return {"status": "error", "message": "The playlist no longer exists."}
+
+    # Fetch the current playlist tracks
+    current_tracks = current_playlist['tracks']['items']
+
+    # Compare the current tracks with the initially loaded tracks
+    if set(initial_tracks) != set(current_tracks):
+        return {
+            "status": "error",
+            "message": "The playlist has been modified. Please refresh the page to load the updated playlist.",
+        }
+
+    return {"status": "success"}
+
 @app.route('/playlists/')
 def playlists():
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
@@ -295,6 +315,12 @@ def save_ratings(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
+    
+    # Check if the playlist exists and hasn't been modified
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message="Deleted or modified playlist mid process. Please try again.")
     tracks = playlist['tracks']['items']
     ratings = {}
     for track in tracks:
@@ -321,6 +347,11 @@ def create_playlist(playlist_id):
     sp = spotipy.Spotify(auth_manager=auth_manager)
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
+    playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message="Deleted or modified playlist mid process. Please try again.")
     if request.method == 'POST':
         print("POST request detected")
         playlist_name = request.form['playlist_name']
