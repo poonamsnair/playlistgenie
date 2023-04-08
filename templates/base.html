@@ -25,7 +25,6 @@
   {% include 'loader.html' %}
 {% endif %}
 
-    
 {% if not request.path == url_for('index') %}
   <nav class="navbar navbar-expand-lg navbar-dark">
     <a class="navbar-brand text-white" href="{{ url_for('index') }}">Playlist Genie</a>
@@ -35,7 +34,7 @@
       <ul class="navbar-nav ml-auto"></ul>
       <!-- Add the nav-user-avatar div after the navbar-nav list -->
       <div class="nav-user-avatar" id="avatarContainer">
-        <div class="avatar" id="avatar"></div>
+        <div class="avatar" id="avatar">{{ username[0].upper() }}</div>
         <div class="dropdown-menu" id="dropdownMenu">
           <a href="{{ url_for('logout') }}" id="logout">Logout</a>
           <a href="https://donate.stripe.com/4gw5nb0il9Di2ze5kk" target="_blank">Donate</a>
@@ -77,5 +76,25 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
       
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
+
+{% if not request.path == url_for('index') %}
+  <!-- Add a script to handle the click event on the avatar -->
+  <script>
+    const avatarContainer = document.getElementById('avatarContainer');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+
+    avatarContainer.addEventListener('click', () => {
+      dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Close the dropdown menu when the user clicks outside of it
+    window.addEventListener('click', (event) => {
+      if (!avatarContainer.contains(event.target)) {
+        dropdownMenu.style.display = 'none';
+      }
+    });
+  </script>
+{% endif %}
+
   </body>
 </html>
