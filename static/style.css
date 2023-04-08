@@ -756,7 +756,7 @@ body[data-page="create-playlist"] {
 }
 
 /* recommendations */
-.status-message {
+#status-message {
   color:#36324c !important;
   text-align: center !important;
 
@@ -769,3 +769,16 @@ body[data-page="create-playlist"] {
   background-size: 1rem 1rem;
   background-image: linear-gradient(45deg,rgba(13, 255, 0, 0.15) 25%,transparent 25%,transparent 50%,rgb(0 0 0 / 15%) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
 }
+
+#home-title {
+ font-size: 7em !important; 
+
+}
+
+.page-link {
+  color: #0000 !important;
+  }
+
+  .page-link:hover {
+    color: #8a62d5 !important;
+    }
