@@ -206,7 +206,8 @@ h2, h3, h4, h5, h6 {
 .dropdown-menu {
   display: none;
   position: absolute;
-  right: 0;
+  left: -87px;
+  text-align: center;
   top: 100%;
   background-color: #36324c;
   color: #fff;
@@ -401,7 +402,6 @@ body.fixed-footer {
 .row {
   display: flex;
   flex-wrap: wrap;
-  margin: -10px;
 }
 
 .col-md-4 {
