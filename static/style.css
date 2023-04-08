@@ -471,6 +471,25 @@ body.fixed-footer {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25); /* Increase shadow intensity on hover */
 }
 
+.newly-created {
+  background: linear-gradient(270deg, #E6CEFF, #4300ff, #00ff5b);
+  background-size: 300% 300%;
+  animation: gradient-animation 3s ease-in-out forwards;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+
 /* Rate Playlist page specific styles */
 .mb-4 {
   text-align: center !important;
@@ -770,9 +789,8 @@ body[data-page="create-playlist"] {
   background-image: linear-gradient(45deg,rgba(13, 255, 0, 0.15) 25%,transparent 25%,transparent 50%,rgb(0 0 0 / 15%) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
 }
 
-#home-title {
+.home-title {
  font-size: 7em !important; 
-
 }
 
 .page-link {
