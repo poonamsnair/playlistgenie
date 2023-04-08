@@ -525,8 +525,8 @@ body[data-page="create-playlist"] {
 
 button:not(:disabled) {
   cursor: pointer;
-  color: #000 !important;
-  background-color: #b79fff !important;
+  background-color: rgba(169, 169, 169, 0.3) !important;
+  color:-internal-light-dark(rgba(16, 16, 16, 0.3) !important; 
   border-radius: 500px;
   -webkit-box-align: center;
   align-items: center;
@@ -609,7 +609,6 @@ button:not(:disabled) {
 }
 
 .custom-btn:hover {
-  color: #fff;
   border: none;
   transition: all 0.3s ease;
 }
@@ -692,6 +691,6 @@ button:not(:disabled) {
 /* page nav */
 
 .page-item.active .page-link {
-  background-color: #1cd760;
-  border-color: #1cd760;
+  background-color: #1cd76 !important;
+  border-color: #1cd760 !important;
 }
