@@ -19,13 +19,14 @@
 {% block body_class %}fixed-footer{% endblock %}
 {% block content %}
   <div class="simplified-hero" style="position: relative; z-index: 2;">
-    <h1 class="home-title">Playlist Genie</h1>
-    <h5>AI-curated Spotify playlists just for you</h5>
-    <div class="sign-up-options">
-      <a href="{{ url_for('login') }}" class="btn btn-login rounded-pill">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png" alt="Spotify Logo" class="spotify-logo">
-        Sign In with Spotify
-      </a>
+    <div class="logo-container">
+      <svg class="circle-logo" viewBox="0 0 120 104" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <circle class="circle" cx="30" cy="30" r="30"/>
+        <circle class="circle" cx="90" cy="30" r="30"/>
+        <circle class="circle" cx="60" cy="74" r="30"/>
+      </svg>
     </div>
+    <h1 class="home-title">Playlist Genie</h1>
+    ...
   </div>
 {% endblock %}
