@@ -819,9 +819,21 @@ body[data-page="create-playlist"] {
 }
 
 .page-link {
-  color: #000 !important;
+  color: #000 ;
 }
 
 .page-link:hover {
-    color: #8a62d5 !important;
+    color: #8a62d5;
+}
+
+.page-item.disabled {
+  /* Common styles for both disabled next and back buttons */
+  pointer-events: none; /* Disable clicks */
+  cursor: not-allowed; /* Show not-allowed cursor */
+}
+
+.page-item.page-item-next.disabled .page-link,
+.page-item.page-item-back.disabled .page-link {
+  /* Custom styles for the disabled next and back pagination links */
+  color: #999 !important; /* Gray text color */
 }
