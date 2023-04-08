@@ -54,7 +54,7 @@
         console.log('Received recommendation_done event:', data);
         if (data.request_id === request_id) {
             document.getElementById("status-message").innerHTML = "Recommendations generated successfully!";
-            window.location.href = "/playlist_list.html?new_playlist=" + data.rec_playlist_id;
+            window.location.href = "/playlists?new_playlist=" + data.rec_playlist_id;
 
         }
     });
