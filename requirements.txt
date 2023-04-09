@@ -17,3 +17,5 @@ typing
 oauthlib
 requests_oauthlib
 requests
+psutil
+numpy

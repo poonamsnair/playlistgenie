@@ -34,6 +34,8 @@ from flask_caching import Cache
 from typing import List
 from spotipy.cache_handler import CacheHandler
 from flask_session import Session
+import itertools
+import numpy as np
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -385,7 +387,7 @@ def recommendation(playlist_id, rec_playlist_id):
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
-    
+
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
@@ -417,6 +419,14 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
+    # Calculate the average value of each audio feature for highly-rated songs
+    high_ratings = [d for d in playlist_data if d['ratings'] >= 7]  # Assuming ratings are between 1-10 and 7+ is considered high
+    avg_high_ratings = {key: np.mean([d[key] for d in high_ratings]) for key in feature_keys}
+
+    # Combine multiple seed tracks for each recommendation call
+    num_seed_tracks = 5
+    seed_track_combinations = list(itertools.combinations([d['id'] for d in playlist_data], num_seed_tracks))
+
     X = [[d[key] for key in feature_keys] for d in playlist_data]
     y = [d['ratings'] for d in playlist_data]
 
@@ -440,7 +450,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     else:
         cv = LeaveOneOut()
-
+    
     grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
                                pre_dispatch='2*n_jobs', scoring='accuracy')
 
@@ -449,10 +459,12 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         grid_search.fit(X_scaled, y)
     except Exception as e:
         emit_error_and_delete_playlist(request_id, "Error: Fit transformer error")
+
     rec_track_ids = set()
-    for track_id in [d['id'] for d in playlist_data]:
+    for seed_tracks in seed_track_combinations:
         try:
-            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2),
+                                            target_energy=avg_high_ratings['energy'])['tracks']
             for track in rec_tracks:
                 rec_track_ids.add(track['id'])
         except Exception as e:
@@ -461,6 +473,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     if not rec_track_ids:
         emit_error_and_delete_playlist(request_id, "Error: No tracks found to be added")
     socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
+
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
     for track_chunk in track_chunks:
@@ -470,7 +483,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             logging.error(f"Error adding tracks to playlist: {str(e)}")
             emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
             return
+
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
+
+   
+
     
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
