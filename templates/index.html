@@ -21,11 +21,21 @@
   <div class="simplified-hero" style="position: relative; z-index: 2;">
     <div class="logo-title-container">
       <div class="logo-container-main">
-        <svg class="circle-logo" viewBox="-10 -10 140 124" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-          <circle class="circle" cx="30" cy="30" r="30"/>
-          <circle class="circle" cx="90" cy="30" r="30"/>
-          <circle class="circle" cx="60" cy="74" r="30"/>
-        </svg>
+        <svg class="circle-logo" viewBox="0 0 120 104" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+          <defs>
+            <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="0%" spreadMethod="pad">
+              <stop offset="0%" stop-color="#1ED760" stop-opacity="1" class="gradient">
+                <animate attributeName="stop-color" values="#1ED760; #1DB954; #1ED760" dur="3s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="100%" stop-color="#1DB954" stop-opacity="1" class="gradient">
+                <animate attributeName="stop-color" values="#1DB954; #1ED760; #1DB954" dur="3s" repeatCount="indefinite" />
+              </stop>
+            </linearGradient>
+          </defs>
+          <circle class="circle gradient" cx="30" cy="52" r="28"/>
+          <circle class="circle gradient" cx="90" cy="52" r="28"/>
+          <circle class="circle gradient" cx="60" cy="20" r="28"/>
+        </svg>        
       </div>
       <h1 class="home-title" style="font-size: 7em;">Playlist Genie</h1>
     </div>
