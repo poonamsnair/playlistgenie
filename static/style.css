@@ -282,6 +282,8 @@ body.fixed-footer {
   padding: 0 20px;
 }
 
+/*logo*/
+
 .logo-title-container {
   display: flex;
   align-items: center;
@@ -371,7 +373,7 @@ body.fixed-footer {
 }
 
 
-/* New simplified landing page specific styles */
+/* landing login page */
 
 .simplified-hero {
   position: relative;
