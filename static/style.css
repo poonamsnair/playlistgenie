@@ -289,18 +289,15 @@ body.fixed-footer {
 }
 
 .logo-container-main {
-  width: 10em;
-  height: 10em;
+  width: 11em;
+  height: 11em;
 }
 
 .logo-container-navbar {
-  width: 2.5em;
-  height: 2.5em;
+  width: 4em;
+  height: 4em;
 }
 
-.circle-logo {
-  padding: 5px;
-}
 
 .gradient {
   fill: url(#circleGradient);

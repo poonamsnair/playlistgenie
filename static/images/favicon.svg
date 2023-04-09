@@ -1,11 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 124" width="128" height="128">
-  <defs>
-    <linearGradient id="circleGradientFavicon" x1="0%" y1="0%" x2="100%" y2="0%" spreadMethod="pad">
-      <stop offset="0%" stop-color="#1ED760" stop-opacity="1" />
-      <stop offset="100%" stop-color="#1DB954" stop-opacity="1" />
-    </linearGradient>
-  </defs>
-  <circle class="circle" cx="40" cy="62" r="28" fill="url(#circleGradientFavicon)" />
-  <circle class="circle" cx="120" cy="62" r="28" fill="url(#circleGradientFavicon)" />
-  <circle class="circle" cx="80" cy="30" r="28" fill="url(#circleGradientFavicon)" />
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" enable-background="new 0 0 32 32" xml:space="preserve">
+  <g>
+    <circle fill="#1ED760" cx="16" cy="8" r="6"/>
+    <circle fill="#1DB954" cx="8" cy="24" r="6"/>
+    <circle fill="#1ED760" cx="24" cy="24" r="6"/>
+  </g>
 </svg>
