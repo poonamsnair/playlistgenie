@@ -308,7 +308,9 @@ body.fixed-footer {
 
 @keyframes gradientAnimation {
   0% { stop-color: #1ED760; }
-  50% { stop-color: #1DB954; }
+  25% { stop-color: #1DB954; }
+  50% { stop-color: #1ED760; }
+  75% { stop-color: #1DB954; }
   100% { stop-color: #1ED760; }
 }
 
