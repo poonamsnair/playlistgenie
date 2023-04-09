@@ -332,6 +332,7 @@ def save_ratings(playlist_id):
             ratings[track_id] = 5
     session['ratings'] = ratings
     session['playlist_id'] = playlist_id
+    print("Stored ratings in session:", ratings)
     return redirect(url_for('create_playlist', playlist_id=playlist_id, username=username))
     
     
@@ -379,6 +380,7 @@ def recommendation(playlist_id, rec_playlist_id):
     session['spotify_username'] = user_id
     session['username'] = username
     ratings = session['ratings']
+    print("Retrieved ratings from session:", ratings)
     request_id = str(uuid.uuid4())
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
