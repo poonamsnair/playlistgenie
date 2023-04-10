@@ -418,25 +418,22 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
     # Convert audio_features to a list of dictionaries
-    playlist_data = []
-    for feature in audio_features:
-        feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
-        feature_dict['ratings'] = ratings[feature['id']]
-        playlist_data.append(feature_dict)
+    playlist_data = pd.DataFrame(audio_features).drop(columns=['type', 'uri', 'track_href', 'analysis_url'])
+    playlist_data['ratings'] = playlist_data['id'].map(ratings)
     
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
     # Calculate the average value of each audio feature for highly-rated songs
-    high_ratings = [d for d in playlist_data if d['ratings'] >= 7]  # Assuming ratings are between 1-10 and 7+ is considered high
-    avg_high_ratings = {key: np.mean([d[key] for d in high_ratings]) for key in feature_keys}
+    high_ratings = playlist_data[playlist_data['ratings'] >= 7]
+    avg_high_ratings = high_ratings[feature_keys].mean().to_dict()
 
     # Combine multiple seed tracks for each recommendation call
     num_seed_tracks = 5
     seed_track_combinations = list(itertools.combinations([d['id'] for d in playlist_data], num_seed_tracks))
 
-    X = np.array([[d[key] for key in feature_keys] for d in playlist_data])
-    y = np.array([d['ratings'] for d in playlist_data])
+    X = playlist_data[feature_keys].to_numpy()
+    y = playlist_data['ratings'].to_numpy()
 
     scaler = MinMaxScaler()
 
@@ -459,8 +456,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     else:
         cv = LeaveOneOut()
     
-    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
-                               pre_dispatch='2*n_jobs', scoring='accuracy')
+    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=-1,
+                           pre_dispatch='2*n_jobs', scoring='accuracy')
 
     try:
         X_scaled = scaler.fit_transform(X)
@@ -494,9 +491,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
-   
-
-    
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
     pass

@@ -857,3 +857,9 @@ body[data-page="create-playlist"] {
   /* Custom styles for the disabled next and back pagination links */
   color: #999 !important; /* Gray text color */
 }
+
+#error-message
+
+{
+  color: red !important; 
+}
