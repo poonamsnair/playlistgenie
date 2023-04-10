@@ -120,6 +120,14 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
+@app.route('/')
+def index():
+    if not session.get('uuid'):
+        # Step 1. Visitor is unknown, give random ID
+        session['uuid'] = str(uuid.uuid4())
+    return render_template('index.html')
+
+
 @app.route('/login')
 def login():
     try:
@@ -153,6 +161,8 @@ def login():
         print("Error in login route:", e)
         traceback.print_exc(file=sys.stdout)
         return "Error in login route: " + str(e), 500
+
+
 
 @app.route('/logout')
 def logout():
