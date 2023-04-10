@@ -415,10 +415,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     audio_features = list(audio_features)
     gc.collect()
 
-    if len(audio_features) < 50:
-        emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
-    elif len(audio_features) > 100:
-        emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
+    if not (5 <= len(audio_features) <= 100):
+        emit_error_and_delete_playlist(request_id, "Error: Number of tracks must be between 5 and 100")
 
     playlist_data = pd.DataFrame(audio_features).drop(columns=['type', 'uri', 'track_href', 'analysis_url'])
     playlist_data['ratings'] = playlist_data['id'].map(ratings)
