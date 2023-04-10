@@ -37,7 +37,7 @@ from flask_session import Session
 import itertools
 import numpy as np
 from joblib import Memory
-import tracemalloc
+import gc
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -71,11 +71,6 @@ memory = Memory(location='/tmp/joblib_cache', verbose=0)
 def get_audio_features(sp, track_ids):
     return sp.audio_features(track_ids)
 
-def print_memory_usage(message="Memory usage:"):
-    current, peak = tracemalloc.get_traced_memory()
-    print(f"{message} {current / 10**6:.2f}MB (peak: {peak / 10**6:.2f}MB)")
-    tracemalloc.stop()
-    
 def session_cache_path():
     uuid = session.get('uuid')
     if uuid is None:
@@ -405,38 +400,34 @@ def recommendation(playlist_id, rec_playlist_id):
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
+
     sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
-    print_memory_usage("After: tracks = playlist['tracks']['items']") 
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
-    print_memory_usage("After: track_ids = list(ratings.keys())") 
-    # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
     audio_features = get_audio_features(sp, track_ids)
-    print_memory_usage("After: audio_features = get_audio_features(sp, track_ids)") 
     socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
-    # Remove NoneType audio features
-    audio_features = [feature for feature in audio_features if feature is not None]
+    audio_features = (feature for feature in audio_features if feature is not None)
+
+    audio_features = list(audio_features)
+    gc.collect()
 
     if len(audio_features) < 50:
         emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
-    # Convert audio_features to a list of dictionaries
+
     playlist_data = pd.DataFrame(audio_features).drop(columns=['type', 'uri', 'track_href', 'analysis_url'])
     playlist_data['ratings'] = playlist_data['id'].map(ratings)
-    print_memory_usage("After: playlist_data['ratings'] = playlist_data['id'].map(ratings)") 
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
-    # Calculate the average value of each audio feature for highly-rated songs
-    high_ratings = [data for data in playlist_data if data['rating'] >= 7]
+    high_ratings = (data for data in playlist_data if data['rating'] >= 7)
     avg_high_ratings = {k: sum(d[k] for d in high_ratings) / len(high_ratings) for k in feature_keys}
-    print_memory_usage("After:  avg_high_ratings = k: sum(d[k] for d in high_ratings) / len(high_ratings) for k in feature_key") 
-    # Combine multiple seed tracks for each recommendation call
+
     num_seed_tracks = 5
     seed_track_combinations = list(itertools.combinations([row['id'] for _, row in playlist_data.iterrows()], num_seed_tracks))
 
@@ -453,9 +444,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         'weights': ['uniform', 'distance'],
         'metric': ['euclidean', 'manhattan', 'minkowski']
     }
-    print_memory_usage("After:  param grid") 
     socketio.emit("knn_model_trained", {"request_id": request_id}, namespace='/recommendation')
-    # Choose the appropriate cross-validator
+
     n_splits = 5
 
     min_samples_per_class = min(np.bincount(y))
@@ -463,10 +453,9 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     else:
         cv = LeaveOneOut()
-    
+
     grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=-1,
                            pre_dispatch='2*n_jobs', scoring='accuracy')
-    print_memory_usage("After:  grid search") 
     try:
         X_scaled = scaler.fit_transform(X)
         grid_search.fit(X_scaled, y)
@@ -488,7 +477,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
 
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
-    print_memory_usage("After:  track chunks") 
     for track_chunk in track_chunks:
         try:
             sp.user_playlist_add_tracks(user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
