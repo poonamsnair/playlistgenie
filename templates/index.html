@@ -41,12 +41,33 @@
     </div>
     <h5>AI-curated Spotify playlists just for you</h5>
     <div class="sign-up-options">
-      <a href="{{ url_for('login') }}" class="btn btn-login rounded-pill">
+      <button id="login-button" class="btn btn-login rounded-pill">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/2048px-Spotify_logo_without_text.svg.png" alt="Spotify Logo" class="spotify-logo">
         Sign In with Spotify
-      </a>
+      </button>
     </div>
   </div>
 {% endblock %}
+{% block scripts %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    const loginButton = document.getElementById("login-button");
+
+    socket.on("login_result", (result) => {
+      if (result.status === 200) {
+        window.location.href = "/playlists";
+      } else {
+        console.error("Error:", result.message);
+        alert(result.message);
+      }
+    });
+
+    loginButton.addEventListener("click", () => {
+      window.location.href = "{{url_for('login')}}";
+    });
+  </script>
+{% endblock %}
+
 
 
