@@ -120,35 +120,39 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
-@app.route('/')
-def index():
-    if not session.get('uuid'):
-        # Step 1. Visitor is unknown, give random ID
-        session['uuid'] = str(uuid.uuid4())
-    return render_template('index.html')
-
-def process_login(code):
+@app.route('/login')
+def login():
     try:
-        auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path=session_cache_path(), show_dialog=True, requests_timeout=10)
-        if code:
-            auth_manager.get_access_token(code)
-            sp = spotipy.Spotify(auth_manager=auth_manager)
-            user_info = sp.me()
-            print(f"{user_info['display_name']} ({user_info['id']}) logged in")
-            return {"status": 200}
-        else:
-            return {"status": 500, "message": "Code not provided"}
+        auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path=session_cache_path(), show_dialog=True, requests_timeout=30)
+        if request.args.get("code"):
+            try:
+                # Step 3. Being redirected from Spotify auth page
+                auth_manager.get_access_token(request.args.get("code"))
+                sp = Spotify(auth_manager=auth_manager)
+                user_info = sp.me()
+                print(f"{user_info['display_name']} ({user_info['id']}) logged in")
+                return redirect('/playlists')
+            except Exception as e:
+                print("Error in Step 3:", e)
+                traceback.print_exc(file=sys.stdout)
+                return "Error in Step 3: " + str(e), 500
 
+        if not auth_manager.get_cached_token():
+            try:
+                # Step 2. Display sign in link when no token
+                auth_url = auth_manager.get_authorize_url()
+                return redirect(auth_url)
+            except Exception as e:
+                print("Error in Step 2:", e)
+                traceback.print_exc(file=sys.stdout)
+                return "Error in Step 2: " + str(e), 500
+
+        # Step 4. Signed in, redirect to playlists
+        return redirect('/playlists')
     except Exception as e:
-        print("Error in process_login:", e)
+        print("Error in login route:", e)
         traceback.print_exc(file=sys.stdout)
-        return {"status": 500, "message": "Error in process_login: " + str(e)}
-
-@socketio.on('login')
-def handle_login(code):
-    result = process_login(code)
-    socketio.emit('login_result', result)
-
+        return "Error in login route: " + str(e), 500
 
 @app.route('/logout')
 def logout():
