@@ -446,7 +446,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     # Combine multiple seed tracks for each recommendation call
     num_seed_tracks = 5
-    seed_track_combinations = list(itertools.combinations([d['id'] for d in playlist_data], num_seed_tracks))
+    seed_track_combinations = list(itertools.combinations(playlist_data['id'].tolist(), num_seed_tracks))
 
     X = playlist_data[feature_keys].to_numpy()
     y = playlist_data['ratings'].to_numpy()
