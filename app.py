@@ -76,38 +76,12 @@ caches_folder = './.spotify_caches/'
 if not os.path.exists(caches_folder):
     os.makedirs(caches_folder)
 
-memory = Memory(location='/tmp/joblib_cache', verbose=0)
-@memory.cache
-def get_audio_features(sp, track_ids):
-    return sp.audio_features(track_ids)
-
 def session_cache_path():
     uuid = session.get('uuid')
     if uuid is None:
         return None
     return caches_folder + uuid
 
-executor = ThreadPoolExecutor(max_workers=1)
-atexit.register(executor.shutdown)
-
-def sigterm_handler(signum, frame):
-    # Perform cleanup tasks here
-    print("SIGTERM received. Performing cleanup tasks...")
-    
-    # Example: stop background threads
-    for thread in threading.enumerate():
-        if thread is not threading.currentThread():
-            thread.join()
-    
-    # Exit the application
-    sys.exit(0)
-
-# Register the SIGTERM handler function
-signal.signal(signal.SIGTERM, sigterm_handler)
-
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-def make_spotify_call(callable, *args, **kwargs):
-    return callable(*args, **kwargs)
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
@@ -166,32 +140,23 @@ def index():
 
 @app.route('/login')
 def login():
-    logging.info("Entering login route")
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
                                                scope=SCOPE,
                                                cache_path=session_cache_path(),
                                                show_dialog=True)
     if request.args.get("code"):
-        logging.info("Received code from Spotify")
-        make_spotify_call(auth_manager.get_access_token, request.args.get("code"))
+        # Step 3. Being redirected from Spotify auth page
+        auth_manager.get_access_token(request.args.get("code"))
         sp = Spotify(auth_manager=auth_manager)
         user_info = sp.me()
-        logging.info(f"{user_info['display_name']} ({user_info['id']}) logged in")
-
-        # Save the auth_manager or access token in the user's session
-        session['access_token'] = auth_manager.get_cached_token()['access_token']
-
+        print(f"{user_info['display_name']} ({user_info['id']}) logged in")
         return redirect('/playlists')
-
-    # Check if the user is already logged in by looking for their access token in the session
-    if 'access_token' in session:
-        logging.info("User is signed in, redirecting to playlists")
-        return redirect('/playlists')
-
     if not auth_manager.get_cached_token():
-        logging.info("No cached token, redirecting to Spotify auth page")
+        # Step 2. Display sign in link when no token
         auth_url = auth_manager.get_authorize_url()
         return redirect(auth_url)
+    # Step 4. Signed in, redirect to playlists
+    return redirect('/playlists')
 
 @app.route('/logout')
 def logout():
@@ -437,54 +402,58 @@ def recommendation(playlist_id, rec_playlist_id):
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
-
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
-    logging.info(f"Starting background_recommendation for request_id: {request_id}")
     sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
-    
+
+    # Get user's liked songs
+    user_liked_songs = set()
+    liked_songs_results = sp.current_user_saved_tracks()
+    for item in liked_songs_results['items']:
+        user_liked_songs.add(item['track']['id'])
+
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-    track_ids = [item['track']['id'] for item in tracks if item['track']['id'] in ratings]
-    del tracks
+    track_ids = list(ratings.keys())
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
-    audio_features = get_audio_features(sp, track_ids)
+    audio_features = sp.audio_features(track_ids)
     socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
 
-    if len(audio_features) < 50:
-        emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
-    elif len(audio_features) > 100:
+    playlist_size = len(audio_features)
+    if playlist_size < 5:
+        emit_error_and_delete_playlist(request_id, "Error: Less than 5 tracks")
+    elif playlist_size > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
-        
+
+    # Adjust the number of neighbors based on the playlist size
+    if playlist_size <= 49:
+        max_neighbors = min(10, len(audio_features) - 1)
+    else:
+        max_neighbors = min(30, len(audio_features) - 1)
+
     # Convert audio_features to a list of dictionaries
-    playlist_data = pd.DataFrame(audio_features).drop(columns=['type', 'uri', 'track_href', 'analysis_url'])
-    playlist_data['ratings'] = playlist_data['id'].map(ratings)
+    playlist_data = []
+    for feature in audio_features:
+        feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
+        feature_dict['ratings'] = ratings[feature['id']]
+        playlist_data.append(feature_dict)
     
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
-    # Calculate the average value of each audio feature for highly-rated songs
-    high_ratings = playlist_data[playlist_data['ratings'] >= 7]
-    avg_high_ratings = high_ratings[feature_keys].mean().to_dict()
-    # Combine multiple seed tracks for each recommendation call
-    num_seed_tracks = 5
-    seed_track_combinations = (combination for combination in itertools.combinations(playlist_data['id'].tolist(), num_seed_tracks))
-
-
-    X = playlist_data[feature_keys].to_numpy()
-    y = playlist_data['ratings'].to_numpy()
+    X = [[d[key] for key in feature_keys] for d in playlist_data]
+    y = [d['ratings'] for d in playlist_data]
 
     scaler = MinMaxScaler()
 
     knn = KNeighborsClassifier()
-    max_neighbors = min(30, len(X) - 1)
 
     param_grid = {
         'n_neighbors': range(1, max_neighbors + 1),
@@ -501,29 +470,28 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     else:
         cv = LeaveOneOut()
-    
-    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=-1,
-                           pre_dispatch='2*n_jobs', scoring='accuracy')
+
+    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
+                               pre_dispatch='2*n_jobs', scoring='accuracy')
 
     try:
         X_scaled = scaler.fit_transform(X)
         grid_search.fit(X_scaled, y)
     except Exception as e:
         emit_error_and_delete_playlist(request_id, "Error: Fit transformer error")
-
     rec_track_ids = set()
-    for seed_tracks in seed_track_combinations:
+    for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
-                rec_track_ids.add(track['id'])
+                if track['id'] not in user_liked_songs:  # Filter out tracks that the user has already liked
+                    rec_track_ids.add(track['id'])
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Error: Adding tracks to playlist")
 
     if not rec_track_ids:
         emit_error_and_delete_playlist(request_id, "Error: No tracks found to be added")
     socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
-
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
     for track_chunk in track_chunks:
@@ -533,9 +501,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             logging.error(f"Error adding tracks to playlist: {str(e)}")
             emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
             return
-
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-    
+
+
+
+
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
     pass
