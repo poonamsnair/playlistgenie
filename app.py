@@ -2,8 +2,6 @@ import eventlet
 from flask import Flask, redirect, request, session, url_for, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
-import gc
-import logging
 import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyOAuth
@@ -29,25 +27,13 @@ from spotipy import Spotify
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
 from flask_caching import Cache
 from typing import List
 from spotipy.cache_handler import CacheHandler
 from flask_session import Session
-import itertools
-import numpy as np
-from joblib import Memory
-from concurrent.futures import ThreadPoolExecutor
-import atexit
-import signal
-import sys
-import threading
-
-
-logging.basicConfig(level=logging.INFO)
-
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -81,7 +67,6 @@ def session_cache_path():
     if uuid is None:
         return None
     return caches_folder + uuid
-
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
@@ -171,12 +156,10 @@ def logout():
 def remove_duplicates(tracks):
     unique_tracks = OrderedDict()
     for track in tracks:
-        if track['track'] is not None:  # Add this check to ensure track is not None
-            track_id = track['track']['id']
-            if track_id not in unique_tracks:
-                unique_tracks[track_id] = track
+        track_id = track['track']['id']
+        if track_id not in unique_tracks:
+            unique_tracks[track_id] = track
     return list(unique_tracks.values())
-
 
 
 def delete_playlist(sp, playlist_id):
@@ -284,6 +267,10 @@ def rate_playlist(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message=message)
     if request.MOBILE:
         return redirect(url_for('mobile_rate_playlist', username=username, playlist_id=playlist_id))
     try:
@@ -310,6 +297,10 @@ def mobile_rate_playlist(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message=message)
     if not request.MOBILE:
         return redirect(url_for('rate_playlist', username=username, playlist_id=playlist_id))
     try:
@@ -337,6 +328,11 @@ def save_ratings(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
+    # Check if the playlist exists and hasn't been modified
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message=message)
     tracks = playlist['tracks']['items']
     ratings = {}
     for track in tracks:
@@ -349,7 +345,6 @@ def save_ratings(playlist_id):
             ratings[track_id] = 5
     session['ratings'] = ratings
     session['playlist_id'] = playlist_id
-    print("Stored ratings in session:", ratings)
     return redirect(url_for('create_playlist', playlist_id=playlist_id, username=username))
     
     
@@ -365,6 +360,10 @@ def create_playlist(playlist_id):
     user_profile = sp.me()  # Retrieve user's profile information
     username = user_profile['display_name'] 
     playlist = sp.playlist(playlist_id)
+    check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
+    if check_result['status'] == "error":
+        message = check_result['message']
+        return render_template('error.html', username=username, message="Deleted or modified playlist mid process. Please try again.")
     if request.method == 'POST':
         print("POST request detected")
         playlist_name = request.form['playlist_name']
@@ -397,24 +396,17 @@ def recommendation(playlist_id, rec_playlist_id):
     session['spotify_username'] = user_id
     session['username'] = username
     ratings = session['ratings']
-    print("Retrieved ratings from session:", ratings)
     request_id = str(uuid.uuid4())
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
+    
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
-
-    # Get user's liked songs
-    user_liked_songs = set()
-    liked_songs_results = sp.current_user_saved_tracks()
-    for item in liked_songs_results['items']:
-        user_liked_songs.add(item['track']['id'])
-
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
@@ -426,18 +418,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
 
-    playlist_size = len(audio_features)
-    if playlist_size < 5:
-        emit_error_and_delete_playlist(request_id, "Error: Less than 5 tracks")
-    elif playlist_size > 100:
+    if len(audio_features) < 50:
+        emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
+    elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
-
-    # Adjust the number of neighbors based on the playlist size
-    if playlist_size <= 49:
-        max_neighbors = min(10, len(audio_features) - 1)
-    else:
-        max_neighbors = min(30, len(audio_features) - 1)
-
     # Convert audio_features to a list of dictionaries
     playlist_data = []
     for feature in audio_features:
@@ -454,6 +438,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     scaler = MinMaxScaler()
 
     knn = KNeighborsClassifier()
+    max_neighbors = min(30, len(X) - 1)
 
     param_grid = {
         'n_neighbors': range(1, max_neighbors + 1),
@@ -484,8 +469,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         try:
             rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
-                if track['id'] not in user_liked_songs:  # Filter out tracks that the user has already liked
-                    rec_track_ids.add(track['id'])
+                rec_track_ids.add(track['id'])
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Error: Adding tracks to playlist")
 
@@ -502,10 +486,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
             return
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-
-
-
-
+    
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
     pass
