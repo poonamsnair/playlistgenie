@@ -153,14 +153,21 @@ def login():
         sp = Spotify(auth_manager=auth_manager)
         user_info = sp.me()
         logging.info(f"{user_info['display_name']} ({user_info['id']}) logged in")
+
+        # Save the auth_manager or access token in the user's session
+        session['access_token'] = auth_manager.get_cached_token()['access_token']
+
         return redirect('/playlists')
+
+    # Check if the user is already logged in by looking for their access token in the session
+    if 'access_token' in session:
+        logging.info("User is signed in, redirecting to playlists")
+        return redirect('/playlists')
+
     if not auth_manager.get_cached_token():
         logging.info("No cached token, redirecting to Spotify auth page")
         auth_url = auth_manager.get_authorize_url()
         return redirect(auth_url)
-    logging.info("User is signed in, redirecting to playlists")
-    return redirect('/playlists')
-
 
 @app.route('/logout')
 def logout():
@@ -442,7 +449,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Calculate the average value of each audio feature for highly-rated songs
     high_ratings = playlist_data[playlist_data['ratings'] >= 7]
     avg_high_ratings = high_ratings[feature_keys].mean().to_dict()
-
     # Combine multiple seed tracks for each recommendation call
     num_seed_tracks = 5
     seed_track_combinations = (combination for combination in itertools.combinations(playlist_data['id'].tolist(), num_seed_tracks))
@@ -484,8 +490,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     for seed_tracks in seed_track_combinations:
         try:
-            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2),
-                                            target_energy=avg_high_ratings['energy'])['tracks']
+            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
                 rec_track_ids.add(track['id'])
         except Exception as e:
