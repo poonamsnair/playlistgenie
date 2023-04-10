@@ -29,7 +29,7 @@ from spotipy import Spotify
 from flask import jsonify
 from flask import request, abort
 from collections import OrderedDict
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, wait_fixed
 from spotipy.exceptions import SpotifyException
 from flask_mobility import Mobility
 from flask_caching import Cache
@@ -105,6 +105,10 @@ def sigterm_handler(signum, frame):
 # Register the SIGTERM handler function
 signal.signal(signal.SIGTERM, sigterm_handler)
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+def make_spotify_call(callable, *args, **kwargs):
+    return callable(*args, **kwargs)
+
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
@@ -169,7 +173,7 @@ def login():
                                                show_dialog=True)
     if request.args.get("code"):
         logging.info("Received code from Spotify")
-        auth_manager.get_access_token(request.args.get("code"))
+        make_spotify_call(auth_manager.get_access_token, request.args.get("code"))
         sp = Spotify(auth_manager=auth_manager)
         user_info = sp.me()
         logging.info(f"{user_info['display_name']} ({user_info['id']}) logged in")
