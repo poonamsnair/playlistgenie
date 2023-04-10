@@ -41,6 +41,11 @@ import numpy as np
 from joblib import Memory
 from concurrent.futures import ThreadPoolExecutor
 import atexit
+import signal
+import sys
+import threading
+
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -84,6 +89,21 @@ def session_cache_path():
 
 executor = ThreadPoolExecutor(max_workers=1)
 atexit.register(executor.shutdown)
+
+def sigterm_handler(signum, frame):
+    # Perform cleanup tasks here
+    print("SIGTERM received. Performing cleanup tasks...")
+    
+    # Example: stop background threads
+    for thread in threading.enumerate():
+        if thread is not threading.currentThread():
+            thread.join()
+    
+    # Exit the application
+    sys.exit(0)
+
+# Register the SIGTERM handler function
+signal.signal(signal.SIGTERM, sigterm_handler)
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
