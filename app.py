@@ -2,6 +2,8 @@ import eventlet
 from flask import Flask, redirect, request, session, url_for, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
+import gc
+import logging
 import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyOAuth
@@ -37,7 +39,8 @@ from flask_session import Session
 import itertools
 import numpy as np
 from joblib import Memory
-import gc
+
+
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -134,23 +137,25 @@ def index():
 
 @app.route('/login')
 def login():
+    logging.info("Entering login route")
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
                                                scope=SCOPE,
                                                cache_path=session_cache_path(),
                                                show_dialog=True)
     if request.args.get("code"):
-        # Step 3. Being redirected from Spotify auth page
+        logging.info("Received code from Spotify")
         auth_manager.get_access_token(request.args.get("code"))
         sp = Spotify(auth_manager=auth_manager)
         user_info = sp.me()
-        print(f"{user_info['display_name']} ({user_info['id']}) logged in")
+        logging.info(f"{user_info['display_name']} ({user_info['id']}) logged in")
         return redirect('/playlists')
     if not auth_manager.get_cached_token():
-        # Step 2. Display sign in link when no token
+        logging.info("No cached token, redirecting to Spotify auth page")
         auth_url = auth_manager.get_authorize_url()
         return redirect(auth_url)
-    # Step 4. Signed in, redirect to playlists
+    logging.info("User is signed in, redirecting to playlists")
     return redirect('/playlists')
+
 
 @app.route('/logout')
 def logout():
