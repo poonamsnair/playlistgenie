@@ -410,12 +410,16 @@ def recommendation(playlist_id, rec_playlist_id):
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
+    logging.info(f"Starting background_recommendation for request_id: {request_id}")
     sp = spotipy.Spotify(auth_manager=auth_manager)
     playlist = sp.playlist(playlist_id)
     tracks = playlist['tracks']['items']
+    
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
-    track_ids = list(ratings.keys())
+    track_ids = [item['track']['id'] for item in tracks if item['track']['id'] in ratings]
+
+
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
     audio_features = get_audio_features(sp, track_ids)
@@ -428,6 +432,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
+        
     # Convert audio_features to a list of dictionaries
     playlist_data = pd.DataFrame(audio_features).drop(columns=['type', 'uri', 'track_href', 'analysis_url'])
     playlist_data['ratings'] = playlist_data['id'].map(ratings)
