@@ -41,7 +41,7 @@ import numpy as np
 from joblib import Memory
 from concurrent.futures import ThreadPoolExecutor
 import atexit
-
+logging.basicConfig(level=logging.INFO)
 
 
 # Import Eventlet and apply monkey patching for better concurrency support
