@@ -465,8 +465,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     for seed_tracks in seed_track_combinations:
         try:
-            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2),
-                                            target_energy=avg_high_ratings['energy'])['tracks']
+            rec_tracks = sp.recommendations(seed_tracks=seed_tracks, limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
                 rec_track_ids.add(track['id'])
         except Exception as e:
