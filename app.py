@@ -202,10 +202,9 @@ def remove_duplicates(tracks):
     return list(unique_tracks.values())
 
 
-def delete_playlist(sp, playlist_id):
-    user_id = sp.current_user()["id"]
-    user_id = sp.me()['id']
+def delete_playlist(sp, user_id, playlist_id):
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
+
 
 def get_playlist_tracks(sp, playlist_id):
     playlist = make_request_with_backoff(sp.playlist, playlist_id)
