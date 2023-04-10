@@ -121,30 +121,21 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
-def make_request_with_backoff(spotify_api_call, *args, **kwargs):
+def make_request_with_backoff(func, *args, **kwargs):
     max_retries = 5
-    retries = 0
-
-    while retries <= max_retries:
+    retry_count = 0
+    while retry_count < max_retries:
         try:
-            result = spotify_api_call(*args, **kwargs)
-            return result
-        except spotipy.SpotifyException as e:
-            if e.http_status == 429:
-                # Get the 'Retry-After' header value
-                retry_after = int(e.headers.get('Retry-After', 0))
-
-                # Wait for the specified time before retrying
-                time.sleep(retry_after)
-
-                # Increment retries counter
-                retries += 1
+            return func(*args, **kwargs)
+        except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 429:  # Rate limit error
+                sleep_time = int(e.headers.get('Retry-After', 0)) + 1
+                print(f"Rate limit hit, waiting for {sleep_time} seconds")
+                time.sleep(sleep_time)
+                retry_count += 1
             else:
-                # Re-raise the exception if it's not a rate limit issue
                 raise e
-
-    # If retries exceed max_retries, raise an exception
-    raise Exception(f"Rate limit exceeded after {max_retries} retries.")
+    raise Exception("Max retries reached")
 
 @app.route('/')
 def index():
@@ -217,7 +208,7 @@ def delete_playlist(sp, playlist_id):
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(sp, playlist_id):
-    playlist = sp.playlist(playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     return playlist['tracks']['items']
 
 
@@ -258,8 +249,8 @@ def playlists():
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    user_playlists = sp.current_user_playlists(limit=api_limit, offset=api_offset)
-    user_profile = sp.me()  # Retrieve user's profile information
+    user_playlists = make_request_with_backoff(sp.current_user_playlists, limit=api_limit, offset=api_offset)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
     total_playlists = user_playlists['total']
     all_playlists = user_playlists['items']
