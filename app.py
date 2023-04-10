@@ -36,6 +36,7 @@ from spotipy.cache_handler import CacheHandler
 from flask_session import Session
 import sys
 import traceback
+import time
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -120,6 +121,31 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
+def make_request_with_backoff(spotify_api_call, *args, **kwargs):
+    max_retries = 5
+    retries = 0
+
+    while retries <= max_retries:
+        try:
+            result = spotify_api_call(*args, **kwargs)
+            return result
+        except spotipy.SpotifyException as e:
+            if e.http_status == 429:
+                # Get the 'Retry-After' header value
+                retry_after = int(e.headers.get('Retry-After', 0))
+
+                # Wait for the specified time before retrying
+                time.sleep(retry_after)
+
+                # Increment retries counter
+                retries += 1
+            else:
+                # Re-raise the exception if it's not a rate limit issue
+                raise e
+
+    # If retries exceed max_retries, raise an exception
+    raise Exception(f"Rate limit exceeded after {max_retries} retries.")
+
 @app.route('/')
 def index():
     if not session.get('uuid'):
@@ -131,13 +157,16 @@ def index():
 @app.route('/login')
 def login():
     try:
-        auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path=session_cache_path(), show_dialog=True, requests_timeout=30)
+        auth_manager = SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, scope=SCOPE, cache_path=session_cache_path(), show_dialog=True, requests_timeout=30)
         if request.args.get("code"):
             try:
                 # Step 3. Being redirected from Spotify auth page
                 auth_manager.get_access_token(request.args.get("code"))
-                sp = Spotify(auth_manager=auth_manager)
-                user_info = sp.me()
+                sp = spotipy.Spotify(auth_manager=auth_manager)
+                
+                # Use the custom function to make requests
+                user_info = make_request_with_backoff(sp.me)
+                
                 print(f"{user_info['display_name']} ({user_info['id']}) logged in")
                 return redirect('/playlists')
             except Exception as e:
@@ -161,7 +190,6 @@ def login():
         print("Error in login route:", e)
         traceback.print_exc(file=sys.stdout)
         return "Error in login route: " + str(e), 500
-
 
 
 @app.route('/logout')
