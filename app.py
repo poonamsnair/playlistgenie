@@ -418,8 +418,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = [item['track']['id'] for item in tracks if item['track']['id'] in ratings]
-
-
+    del tracks
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
     audio_features = get_audio_features(sp, track_ids)
@@ -446,7 +445,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     # Combine multiple seed tracks for each recommendation call
     num_seed_tracks = 5
-    seed_track_combinations = list(itertools.combinations(playlist_data['id'].tolist(), num_seed_tracks))
+    seed_track_combinations = (combination for combination in itertools.combinations(playlist_data['id'].tolist(), num_seed_tracks))
+
 
     X = playlist_data[feature_keys].to_numpy()
     y = playlist_data['ratings'].to_numpy()
