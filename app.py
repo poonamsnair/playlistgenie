@@ -39,6 +39,8 @@ from flask_session import Session
 import itertools
 import numpy as np
 from joblib import Memory
+from concurrent.futures import ThreadPoolExecutor
+
 
 
 
@@ -398,7 +400,11 @@ def recommendation(playlist_id, rec_playlist_id):
     ratings = session['ratings']
     print("Retrieved ratings from session:", ratings)
     request_id = str(uuid.uuid4())
-    threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
+
+    # Use ThreadPoolExecutor to run background_recommendation asynchronously
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        executor.submit(background_recommendation, playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)
+
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
 
