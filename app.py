@@ -40,7 +40,7 @@ import itertools
 import numpy as np
 from joblib import Memory
 from concurrent.futures import ThreadPoolExecutor
-
+import atexit
 
 
 
@@ -81,6 +81,9 @@ def session_cache_path():
     if uuid is None:
         return None
     return caches_folder + uuid
+
+executor = ThreadPoolExecutor(max_workers=1)
+atexit.register(executor.shutdown)
 
 # initalise spotify variables
 SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
