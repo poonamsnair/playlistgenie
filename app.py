@@ -425,7 +425,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
-    high_ratings = playlist_data.loc[playlist_data['rating'] >= 7]
+    high_ratings = playlist_data.loc[playlist_data['ratings'] >= 7]
     avg_high_ratings = {k: high_ratings[k].mean() for k in feature_keys}
 
     num_seed_tracks = 5
