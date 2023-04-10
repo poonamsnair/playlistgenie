@@ -20,4 +20,3 @@ requests
 psutil
 numpy
 joblib==1.1.0
-gc
