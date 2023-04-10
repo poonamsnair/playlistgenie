@@ -36,6 +36,7 @@ from spotipy.cache_handler import CacheHandler
 from flask_session import Session
 import itertools
 import numpy as np
+from joblib import Memory
 
 # Import Eventlet and apply monkey patching for better concurrency support
 eventlet.monkey_patch()
@@ -63,6 +64,11 @@ Session(app)
 caches_folder = './.spotify_caches/'
 if not os.path.exists(caches_folder):
     os.makedirs(caches_folder)
+
+memory = Memory(location='/tmp/joblib_cache', verbose=0)
+@memory.cache
+def get_audio_features(sp, track_ids):
+    return sp.audio_features(track_ids)
 
 def session_cache_path():
     uuid = session.get('uuid')
@@ -401,7 +407,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     track_ids = list(ratings.keys())
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
-    audio_features = sp.audio_features(track_ids)
+    audio_features = get_audio_features(sp, track_ids)
     socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
     # Remove NoneType audio features
@@ -429,8 +435,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     num_seed_tracks = 5
     seed_track_combinations = list(itertools.combinations([d['id'] for d in playlist_data], num_seed_tracks))
 
-    X = [[d[key] for key in feature_keys] for d in playlist_data]
-    y = [d['ratings'] for d in playlist_data]
+    X = np.array([[d[key] for key in feature_keys] for d in playlist_data])
+    y = np.array([d['ratings'] for d in playlist_data])
 
     scaler = MinMaxScaler()
 

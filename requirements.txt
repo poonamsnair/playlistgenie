@@ -19,3 +19,4 @@ requests_oauthlib
 requests
 psutil
 numpy
+joblib==1.1.0
