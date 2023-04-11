@@ -126,8 +126,10 @@ def make_request_with_backoff(func, *args, **kwargs):
     retry_count = 0
     while retry_count < max_retries:
         try:
+            print(f"Attempt #{retry_count + 1}")
             return func(*args, **kwargs)
         except spotipy.exceptions.SpotifyException as e:
+            print(f"SpotifyException caught: {e}")
             if e.http_status == 429:  # Rate limit error
                 sleep_time = int(e.headers.get('Retry-After', 0)) + 1
                 print(f"Rate limit hit, waiting for {sleep_time} seconds")
@@ -136,6 +138,7 @@ def make_request_with_backoff(func, *args, **kwargs):
             else:
                 raise e
     raise Exception("Max retries reached")
+
 
 @app.route('/')
 def index():
@@ -202,9 +205,10 @@ def remove_duplicates(tracks):
     return list(unique_tracks.values())
 
 
-def delete_playlist(sp, user_id, playlist_id):
+def delete_playlist(sp, playlist_id):
+    user_id = make_request_with_backoff(sp.current_user()["id"])
+    user_id = make_request_with_backoff(sp.me())
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
-
 
 def get_playlist_tracks(sp, playlist_id):
     playlist = make_request_with_backoff(sp.playlist, playlist_id)
