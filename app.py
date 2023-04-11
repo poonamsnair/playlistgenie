@@ -482,10 +482,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
 
-    if len(audio_features) < 50:
-        emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
+    if len(audio_features) < 5:
+        emit_error_and_delete_playlist(request_id, "Less than 5 tracks")
     elif len(audio_features) > 100:
-        emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
+        emit_error_and_delete_playlist(request_id, "More than 100 tracks")
 
     # Convert audio_features to a list of dictionaries
     playlist_data = []
@@ -528,7 +528,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         X_scaled = scaler.fit_transform(X)
         grid_search.fit(X_scaled, y)
     except Exception as e:
-        emit_error_and_delete_playlist(request_id, "Error: Fit transformer error")
+        emit_error_and_delete_playlist(request_id, "Fit transformer error")
 
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
@@ -539,10 +539,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
                     rec_track_ids.add(track['id'])
         except Exception as e:
-            emit_error_and_delete_playlist(request_id, "Error: Adding tracks to playlist")
+            emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
 
     if not rec_track_ids:
-        emit_error_and_delete_playlist(request_id, "Error: No tracks found to be added")
+        emit_error_and_delete_playlist(request_id, "No tracks found to be added")
     socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
     track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
 
@@ -551,7 +551,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
-            emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
+            emit_error_and_delete_playlist(request_id, f"Aadding tracks to playlist: {str(e)}")
             return
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
 
