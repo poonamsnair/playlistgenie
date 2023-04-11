@@ -241,8 +241,12 @@ def check_playlist_before_submit(sp, playlist_id, initial_tracks):
     # Fetch the current playlist tracks
     current_tracks = current_playlist['tracks']['items']
 
-    # Compare the current tracks with the initially loaded tracks
-    if set(initial_tracks) != set(current_tracks):
+    # Get the track IDs for initial and current tracks
+    initial_track_ids = {track['track']['id'] for track in initial_tracks}
+    current_track_ids = {track['track']['id'] for track in current_tracks}
+
+    # Compare the current track IDs with the initially loaded track IDs
+    if initial_track_ids != current_track_ids:
         return {
             "status": "error",
             "message": "The playlist has been modified. Please refresh the page to load the updated playlist.",
