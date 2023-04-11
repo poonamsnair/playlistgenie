@@ -446,19 +446,37 @@ def recommendation(playlist_id, rec_playlist_id):
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
-    
+def get_user_liked_tracks(sp):
+    liked_track_ids = set()
+    offset = 0
+    limit = 50
+
+    while True:
+        results = make_request_with_backoff(lambda: sp.current_user_saved_tracks(limit=limit, offset=offset))
+        if not results['items']:
+            break
+
+        for item in results['items']:
+            liked_track_ids.add(item['track']['id'])
+        
+        offset += limit
+
+    return liked_track_ids
+
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
+    
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    playlist = sp.playlist(playlist_id)
+    liked_track_ids = get_user_liked_tracks(sp)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
 
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
-    audio_features = sp.audio_features(track_ids)
+    audio_features = make_request_with_backoff(sp.audio_features, track_ids)
     socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
     # Remove NoneType audio features
@@ -468,6 +486,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         emit_error_and_delete_playlist(request_id, "Error: Less than 50 tracks")
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "Error: More than 100 tracks")
+
     # Convert audio_features to a list of dictionaries
     playlist_data = []
     for feature in audio_features:
@@ -482,18 +501,18 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     y = [d['ratings'] for d in playlist_data]
 
     scaler = MinMaxScaler()
-
     knn = KNeighborsClassifier()
+
     max_neighbors = min(30, len(X) - 1)
+    min_neighbors = max(5, len(X) // 10)
 
     param_grid = {
-        'n_neighbors': range(1, max_neighbors + 1),
+        'n_neighbors': range(min_neighbors, max_neighbors + 1),
         'weights': ['uniform', 'distance'],
         'metric': ['euclidean', 'manhattan', 'minkowski']
     }
 
     socketio.emit("knn_model_trained", {"request_id": request_id}, namespace='/recommendation')
-    # Choose the appropriate cross-validator
     n_splits = 5
 
     min_samples_per_class = min(np.bincount(y))
@@ -510,12 +529,15 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         grid_search.fit(X_scaled, y)
     except Exception as e:
         emit_error_and_delete_playlist(request_id, "Error: Fit transformer error")
+
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = sp.recommendations(seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
-                rec_track_ids.add(track['id'])
+                # Exclude tracks that are already in the seed playlist or liked by the user
+                if track['id'] not in track_ids and track['id'] not in liked_track_ids:
+                    rec_track_ids.add(track['id'])
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Error: Adding tracks to playlist")
 
@@ -526,13 +548,13 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     for track_chunk in track_chunks:
         try:
-            sp.user_playlist_add_tracks(user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
+            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
             emit_error_and_delete_playlist(request_id, f"Error adding tracks to playlist: {str(e)}")
             return
     socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
-    
+
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
     pass
