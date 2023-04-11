@@ -206,8 +206,7 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(sp, playlist_id):
-    user_id = make_request_with_backoff(sp.current_user()["id"])
-    user_id = make_request_with_backoff(sp.me())
+    user_id = make_request_with_backoff(sp.current_user)["id"]
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(sp, playlist_id):
@@ -215,14 +214,14 @@ def get_playlist_tracks(sp, playlist_id):
     return playlist['tracks']['items']
 
 
-def paginate_playlists(playlists: List, limit: int, offset: int) -> List:
+def paginate_playlists(playlists: List, limit: int, offset: int):
     start = offset
     end = offset + limit
     return playlists[start:end]
 
 def check_playlist_before_submit(sp, playlist_id, initial_tracks):
     # Fetch the current playlist
-    current_playlist = sp.playlist(playlist_id)
+    current_playlist = make_request_with_backoff(sp.playlist, playlist_id)
 
     # Check if the playlist still exists
     if not current_playlist:
@@ -260,7 +259,7 @@ def playlists():
     playlist_data = []
     unique_track_counts = {}
     for playlist in all_playlists:
-        tracks = get_playlist_tracks(sp, playlist['id'])
+        tracks = make_request_with_backoff(get_playlist_tracks, sp, playlist['id'])
         unique_tracks = remove_duplicates(tracks) 
         if len(unique_tracks) >= 1:
             playlist_data.append({
