@@ -197,12 +197,20 @@ def logout():
     return redirect('/')
 
 def remove_duplicates(tracks):
-    unique_tracks = OrderedDict()
+    seen_track_ids = set()
+    unique_tracks = []
+
     for track in tracks:
+        if track['track'] is None:
+            continue
+
         track_id = track['track']['id']
-        if track_id not in unique_tracks:
-            unique_tracks[track_id] = track
-    return list(unique_tracks.values())
+
+        if track_id not in seen_track_ids:
+            seen_track_ids.add(track_id)
+            unique_tracks.append(track)
+
+    return unique_tracks
 
 
 def delete_playlist(sp, playlist_id):
