@@ -593,11 +593,18 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         cv = LeaveOneOut()
 
     print("Starting model optimization")
+    socketio.emit("optimization_started", {"request_id": request_id}, namespace='/recommendation')
     for model in models:
         print(f"Optimizing {model['name']}...")
+        socketio.emit("optimizing_model", {"request_id": request_id, "model_name": model['name']}, namespace='/recommendation')
+        
         grid_search = GridSearchCV(estimator=model['estimator'], param_grid=model['param_grid'], cv=cv, n_jobs=2,
                                 pre_dispatch='2*n_jobs', scoring='accuracy')
         grid_search.fit(X_scaled_pca, y)
+        
+        print(f"Done optimizing {model['name']}, best score: {grid_search.best_score_}")
+        socketio.emit("optimization_done", {"request_id": request_id, "model_name": model['name'], "best_score": grid_search.best_score_}, namespace='/recommendation')
+
 
         if grid_search.best_score_ > best_score:
             best_score = grid_search.best_score_

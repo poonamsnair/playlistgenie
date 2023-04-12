@@ -53,7 +53,7 @@
     socket.on('model_comparison', function(data) {
         console.log('Received model_comparison event:', data);
         if (data.request_id === request_id) {
-            document.getElementById("status-message").innerHTML = "Selecting the best AI model for your playlist";
+            document.getElementById("status-message").innerHTML = "Selecting the best models to train for your playlist";
         }
     });
 
@@ -61,7 +61,7 @@
     socket.on('best_model', function(data) {
         console.log('Received best_model event:', data);
         if (data.request_id === request_id) {
-            document.getElementById("status-message").innerHTML = "Yay! Best model selected";
+            document.getElementById("status-message").innerHTML = "Identified 3 models..";
         }
     });
 
@@ -71,6 +71,28 @@
             document.getElementById("status-message").innerHTML = "Optimising model...";
         }
     });
+
+    socket.on('optimization_started', (data) => {
+    console.log('Received optimization_started event:', data);
+    if (data.request_id === request_id) {
+        document.getElementById("status-message").innerHTML = "Starting model optimization...";
+    }
+    });
+
+    socket.on('optimizing_model', (data) => {
+    console.log('Received optimizing_model event:', data);
+    if (data.request_id === request_id) {
+        document.getElementById("status-message").innerHTML = `Optimizing ${data.model_name}...`;
+    }
+    });
+
+    socket.on('optimization_done', (data) => {
+    console.log('Received optimization_done event:', data);
+    if (data.request_id === request_id) {
+        document.getElementById("status-message").innerHTML = `Done optimizing ${data.model_name}, best score: ${data.best_score}`;
+    }
+    });
+   
 
     socket.on('recommended_tracks_retrieved', function(data) {
         console.log('Received recommended_tracks_retrieved event:', data);
