@@ -634,13 +634,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         print(f"Done optimizing {model['name']}, best score: {grid_search.best_score_}")
         socketio.emit("optimization_done", {"request_id": request_id, "model_name": model['name'], "best_score": grid_search.best_score_}, namespace='/recommendation')
 
-
         if grid_search.best_score_ > best_score:
             best_score = grid_search.best_score_
-            best_model = model['name']
+            best_model = grid_search.best_estimator_
             best_params = grid_search.best_params_
         print(f"Done optimizing {model['name']}, best score: {best_score}")
-
     print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
 
