@@ -580,12 +580,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             }
         }
     ]
-
+    
+    socketio.emit("best_model", {"request_id": request_id}, namespace='/recommendation')
     best_score = -1
     best_model = None
     best_params = None
-    socketio.emit("best_model", {"request_id": request_id}, namespace='/recommendation')
-
     n_splits = 5
     min_samples_per_class = min(np.bincount(y))
     if min_samples_per_class >= n_splits:
@@ -593,15 +592,20 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     else:
         cv = LeaveOneOut()
 
+    print("Starting model optimization")
     for model in models:
+        print(f"Optimizing {model['name']}...")
         grid_search = GridSearchCV(estimator=model['estimator'], param_grid=model['param_grid'], cv=cv, n_jobs=2,
-                                   pre_dispatch='2*n_jobs', scoring='accuracy')
+                                pre_dispatch='2*n_jobs', scoring='accuracy')
         grid_search.fit(X_scaled_pca, y)
 
         if grid_search.best_score_ > best_score:
             best_score = grid_search.best_score_
             best_model = model['name']
             best_params = grid_search.best_params_
+        print(f"Done optimizing {model['name']}, best score: {best_score}")
+
+    print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
