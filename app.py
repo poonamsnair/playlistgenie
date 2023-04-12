@@ -656,6 +656,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     seed_artists = playlist_top_artists[:3]
     seed_genres = playlist_top_genres[:2]
+    socketio.emit("top_artists", {"request_id": request_id}, namespace='/recommendation')
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
@@ -667,6 +668,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
     
+        socketio.emit("top_artistis_done", {"request_id": request_id}, namespace='/recommendation')
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 

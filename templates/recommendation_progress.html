@@ -94,6 +94,22 @@
     });
    
 
+    socket.on('top_artists', function(data) {
+        console.log('Received top_artists event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Getting top artist and genre info";
+        }
+    });
+
+  
+    socket.on('top_artists_done', function(data) {
+        console.log('Received top_artists_done event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Using top artists and genres to generate recommendations";
+        }
+    }); 
+
+
     socket.on('recommended_tracks_retrieved', function(data) {
         console.log('Received recommended_tracks_retrieved event:', data);
         if (data.request_id === request_id) {
