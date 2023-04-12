@@ -494,6 +494,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
+    socketio.emit("playlist_data_analysis", {"request_id": request_id}, namespace='/recommendation')
 
     # Define feature_keys
     feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
@@ -536,6 +537,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Add PCA for dimensionality reduction
     pca = PCA(n_components=0.95)
     X_scaled_pca = pca.fit_transform(X_scaled)
+    socketio.emit("transform_data", {"request_id": request_id}, namespace='/recommendation')
 
     if len(X_scaled_pca) < 50:
         max_neighbors = min(10, len(X_scaled_pca) - 1)
@@ -545,6 +547,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         min_neighbors = max(5, len(X_scaled_pca) // 10)
 
     # Model comparison: Decision Trees, Random Forests, and k-Nearest Neighbors (kNN)
+    socketio.emit("model_comparison", {"request_id": request_id}, namespace='/recommendation')
     models = [
         {
             'name': 'KNN',
@@ -581,6 +584,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_score = -1
     best_model = None
     best_params = None
+    socketio.emit("best_model", {"request_id": request_id}, namespace='/recommendation')
 
     n_splits = 5
     min_samples_per_class = min(np.bincount(y))
@@ -598,7 +602,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             best_score = grid_search.best_score_
             best_model = model['name']
             best_params = grid_search.best_params_
-
+    socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
         try:

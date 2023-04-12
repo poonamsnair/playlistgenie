@@ -21,11 +21,17 @@
     socket.on('connect_error', function(error) {
         console.error('Error connecting to the server:', error);
     });
+    socket.on('playlist_data_analysis', function(data) {
+        console.log('Received playlist_data_analysis event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Compiling your ratings...";
+        }
+    });
 
     socket.on('playlist_data_processing', function(data) {
         console.log('Received playlist_data_processing event:', data);
         if (data.request_id === request_id) {
-            document.getElementById("status-message").innerHTML = "Processing your playlist data...";
+            document.getElementById("status-message").innerHTML = "Processing track data...";
         }
     });
 
@@ -36,10 +42,33 @@
         }
     });
 
-    socket.on('knn_model_trained', function(data) {
-        console.log('Received knn_model_trained event:', data);
+    socket.on('transform_data', function(data) {
+        console.log('Received transform_data event:', data);
         if (data.request_id === request_id) {
-            document.getElementById("status-message").innerHTML = "Training your model...";
+            document.getElementById("status-message").innerHTML = "Transforming data...";
+        }
+    });
+
+
+    socket.on('model_comparison', function(data) {
+        console.log('Received model_comparison event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Selecting the best AI model for your playlist";
+        }
+    });
+
+
+    socket.on('best_model', function(data) {
+        console.log('Received best_model event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Yay! Best model selected";
+        }
+    });
+
+    socket.on('optimising_model', function(data) {
+        console.log('Received optimising_model event:', data);
+        if (data.request_id === request_id) {
+            document.getElementById("status-message").innerHTML = "Optimising model...";
         }
     });
 
