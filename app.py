@@ -488,11 +488,12 @@ def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
     top_100 = [track[0] for track in sorted_tracks[:100]]
     return top_100
 
-def get_top_tracks_artists_genres_for_playlist(sp, playlist_data, num_genres=5, num_artists=5):
+def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_artists=5):
     genre_count = {}
     artist_count = {}
 
-    for track in playlist_data:
+    for item in tracks:
+        track = item['track']
         track_genres = get_track_genres(sp, track['id'])
         for genre in track_genres:
             if genre not in genre_count:
@@ -646,8 +647,9 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
 
-    # Get playlist-specific top tracks, artists, and genres
-    playlist_top_genres, playlist_top_artists = get_top_tracks_artists_genres_for_playlist(sp, playlist_data)
+    # Get playlist-specific top artists, and genres
+    playlist_top_genres, playlist_top_artists = get_top_tracks_artists_genres_for_playlist(sp, tracks)
+
 
 
     # Generate recommendations based on user's top tracks, artists, and genres
