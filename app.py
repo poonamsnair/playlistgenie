@@ -482,6 +482,7 @@ def one_hot_encode_genres(track_genres, unique_genres):
     return [int(genre in track_genres) for genre in unique_genres]
 
 def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
+    print("Recommended tracks before prediction:", recommended_tracks)
     predicted_ratings = model.predict_proba(recommended_tracks)
     sorted_tracks = sorted(zip(recommended_tracks, predicted_ratings), key=lambda x: x[1], reverse=True)
     top_100 = [track[0] for track in sorted_tracks[:100]]
@@ -658,12 +659,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
                     rec_track_ids.add(track['id'])
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
-
-    def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
-        predicted_ratings = model.predict_proba(recommended_tracks)
-        sorted_tracks = sorted(zip(recommended_tracks, predicted_ratings), key=lambda x: x[1], reverse=True)
-        top_100 = [track[0] for track in sorted_tracks[:100]]
-        return top_100
 
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
