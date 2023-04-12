@@ -77,7 +77,7 @@ def session_cache_path():
     return caches_folder + uuid
 
 # initalise spotify variables
-SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming'
+SCOPE = 'user-library-read playlist-modify-public playlist-modify-private playlist-read-private streaming user-top-read'
 SPOTIPY_REDIRECT_URI = os.environ.get('SPOTIPY_REDIRECT_URI')
 SPOTIPY_CLIENT_ID = os.environ.get('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.environ.get('SPOTIPY_CLIENT_SECRET')
