@@ -488,29 +488,32 @@ def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
     top_100 = [track[0] for track in sorted_tracks[:100]]
     return top_100
 
-def get_user_top_tracks(sp, limit=50, time_range='medium_term'):
-    top_tracks = make_request_with_backoff(sp.current_user_top_tracks, limit=limit, time_range=time_range)['items']
-    track_ids = [track['id'] for track in top_tracks]
-    return track_ids
-
-def get_user_top_artists(sp, limit=50, time_range='medium_term'):
-    top_artists = make_request_with_backoff(sp.current_user_top_artists, limit=limit, time_range=time_range)['items']
-    artist_ids = [artist['id'] for artist in top_artists]
-    return artist_ids
-
-def get_user_top_genres(sp, user_top_artists, limit=50):
+def get_top_tracks_artists_genres_for_playlist(sp, playlist_data, num_genres=5, num_artists=5):
     genre_count = {}
-    for artist_id in user_top_artists:
-        artist = make_request_with_backoff(sp.artist, artist_id)
-        for genre in artist['genres']:
+    artist_count = {}
+
+    for track in playlist_data:
+        track_genres = get_track_genres(sp, track['id'])
+        for genre in track_genres:
             if genre not in genre_count:
                 genre_count[genre] = 1
             else:
                 genre_count[genre] += 1
 
-    top_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
+        related_artists = make_request_with_backoff(lambda: sp.artist_related_artists(track['artists'][0]['id']))['artists']
+        for artist in related_artists:
+            if artist['id'] not in artist_count:
+                artist_count[artist['id']] = 1
+            else:
+                artist_count[artist['id']] += 1
+
+    top_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:num_genres]
+    top_artists = sorted(artist_count.items(), key=lambda x: x[1], reverse=True)[:num_artists]
+
     top_genre_names = [genre[0] for genre in top_genres]
-    return top_genre_names
+    top_artist_ids = [artist[0] for artist in top_artists]
+
+    return top_genre_names, top_artist_ids
 
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
@@ -643,20 +646,18 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
 
-    # Get user's top tracks, artists, and genres
-    user_top_tracks = get_user_top_tracks(sp)
-    user_top_artists = get_user_top_artists(sp)
-    user_top_genres = get_user_top_genres(sp, user_top_artists)
+    # Get playlist-specific top tracks, artists, and genres
+    playlist_top_genres, playlist_top_artists = get_top_tracks_artists_genres_for_playlist(sp, playlist_data)
+
 
     # Generate recommendations based on user's top tracks, artists, and genres
     rec_track_ids = set()
-    seed_tracks = user_top_tracks[:5]
-    seed_artists = user_top_artists[:5]
-    seed_genres = user_top_genres[:5]
+    seed_artists = playlist_top_artists[:3]
+    seed_genres = playlist_top_genres[:2]
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=seed_tracks, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
