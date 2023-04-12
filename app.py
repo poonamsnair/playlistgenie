@@ -478,9 +478,38 @@ def get_unique_genres(playlist_data):
         unique_genres.update(track['genres'])
     return unique_genres
 
-
 def one_hot_encode_genres(track_genres, unique_genres):
     return [int(genre in track_genres) for genre in unique_genres]
+
+def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
+    predicted_ratings = model.predict_proba(recommended_tracks)
+    sorted_tracks = sorted(zip(recommended_tracks, predicted_ratings), key=lambda x: x[1], reverse=True)
+    top_100 = [track[0] for track in sorted_tracks[:100]]
+    return top_100
+
+def get_user_top_tracks(sp, limit=50, time_range='medium_term'):
+    top_tracks = make_request_with_backoff(sp.current_user_top_tracks, limit=limit, time_range=time_range)['items']
+    track_ids = [track['id'] for track in top_tracks]
+    return track_ids
+
+def get_user_top_artists(sp, limit=50, time_range='medium_term'):
+    top_artists = make_request_with_backoff(sp.current_user_top_artists, limit=limit, time_range=time_range)['items']
+    artist_ids = [artist['id'] for artist in top_artists]
+    return artist_ids
+
+def get_user_top_genres(sp, user_top_artists, limit=50):
+    genre_count = {}
+    for artist_id in user_top_artists:
+        artist = make_request_with_backoff(sp.artist, artist_id)
+        for genre in artist['genres']:
+            if genre not in genre_count:
+                genre_count[genre] = 1
+            else:
+                genre_count[genre] += 1
+
+    top_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
+    top_genre_names = [genre[0] for genre in top_genres]
+    return top_genre_names
 
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
@@ -614,10 +643,17 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
+
+    # Get user's top tracks, artists, and genres
+    user_top_tracks = get_user_top_tracks(sp)
+    user_top_artists = get_user_top_artists(sp)
+    user_top_genres = get_user_top_genres(sp, user_top_artists)
+
+    # Generate recommendations based on user's top tracks, artists, and genres
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=[track_id], limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=user_top_tracks, seed_artists=user_top_artists, seed_genres=user_top_genres, limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
@@ -625,19 +661,28 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
 
-    if not rec_track_ids:
-        emit_error_and_delete_playlist(request_id, "No tracks found to be added")
-    socketio.emit("recommended_tracks_retrieved", {"request_id": request_id}, namespace='/recommendation')
-    track_chunks = [list(rec_track_ids)[i:i+100] for i in range(0, len(rec_track_ids), 100)]
+    def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
+        predicted_ratings = model.predict_proba(recommended_tracks)
+        sorted_tracks = sorted(zip(recommended_tracks, predicted_ratings), key=lambda x: x[1], reverse=True)
+        top_100 = [track[0] for track in sorted_tracks[:100]]
+        return top_100
 
-    for track_chunk in track_chunks:
+    # After selecting the best model
+    best_model.fit(X_scaled_pca, y)
+
+    # Get the top 100 recommended songs
+    top_100_songs = get_top_100_songs(best_model, rec_track_ids, X_scaled_pca, scaler, pca)
+
+    # Add the top 100 songs to the playlist
+    for track_id in top_100_songs:
         try:
-            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_chunk)
+            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=[track_id])
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
-            emit_error_and_delete_playlist(request_id, f"Aadding tracks to playlist: {str(e)}")
+            emit_error_and_delete_playlist(request_id, f"Adding tracks to playlist: {str(e)}")
             return
-    socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')
+
+    socketio.emit("recommendation_done", {"request_id": request_id, "rec_playlist_id": rec_playlist_id}, namespace='/recommendation')    
 
 @socketio.on("connect", namespace="/recommendation")
 def on_connect():
