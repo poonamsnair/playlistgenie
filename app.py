@@ -650,16 +650,20 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     # Generate recommendations based on user's top tracks, artists, and genres
     rec_track_ids = set()
+    seed_tracks = user_top_tracks[:5]
+    seed_artists = user_top_artists[:5]
+    seed_genres = user_top_genres[:5]
+
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=user_top_tracks, seed_artists=user_top_artists, seed_genres=user_top_genres, limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_tracks=seed_tracks, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2))['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
                     rec_track_ids.add(track['id'])
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
-
+    
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 
