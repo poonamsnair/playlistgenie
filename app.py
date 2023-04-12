@@ -6,10 +6,13 @@ import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import LeaveOneOut, GroupShuffleSplit, StratifiedKFold, KFold
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, LeaveOneOut
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
 from itertools import zip_longest
 from flask import flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -463,6 +466,23 @@ def get_user_liked_tracks(sp):
 
     return liked_track_ids
 
+def get_track_genres(sp, track_id):
+    track = make_request_with_backoff(lambda: sp.track(track_id))
+    artist_id = track['artists'][0]['id']
+    artist = make_request_with_backoff(lambda: sp.artist(artist_id))
+    return artist['genres']
+
+def get_unique_genres(playlist_data):
+    unique_genres = set()
+    for track in playlist_data:
+        unique_genres.update(track['genres'])
+    return unique_genres
+
+
+def one_hot_encode_genres(track_genres, unique_genres):
+    return [int(genre in track_genres) for genre in unique_genres]
+
+
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
@@ -475,60 +495,109 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
 
+    # Define feature_keys
+    feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
+
     # Retrieve audio features for only the tracks in the seed playlist that were rated by the user
     audio_features = make_request_with_backoff(sp.audio_features, track_ids)
     socketio.emit("playlist_data_processing", {"request_id": request_id}, namespace='/recommendation')
 
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
+    
+    # Handling missing audio features
+    for feature in audio_features:
+        for key in feature_keys:
+            if feature[key] is None:
+                feature[key] = 0
 
     if len(audio_features) < 5:
         emit_error_and_delete_playlist(request_id, "Less than 5 tracks")
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "More than 100 tracks")
 
-    # Convert audio_features to a list of dictionaries
+  # Convert audio_features to a list of dictionaries
     playlist_data = []
     for feature in audio_features:
         feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
         feature_dict['ratings'] = ratings[feature['id']]
+        feature_dict['genres'] = get_track_genres(sp, feature['id'])
         playlist_data.append(feature_dict)
-    
-    socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
-    feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
 
-    X = [[d[key] for key in feature_keys] for d in playlist_data]
+    socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
+
+    unique_genres = get_unique_genres(playlist_data)
+    X = [[d[key] for key in feature_keys] + one_hot_encode_genres(d['genres'], unique_genres) for d in playlist_data]
     y = [d['ratings'] for d in playlist_data]
 
     scaler = MinMaxScaler()
-    knn = KNeighborsClassifier()
+    X_scaled = scaler.fit_transform(X)
 
-    max_neighbors = min(30, len(X) - 1)
-    min_neighbors = max(5, len(X) // 10)
+    # Add PCA for dimensionality reduction
+    pca = PCA(n_components=0.95)
+    X_scaled_pca = pca.fit_transform(X_scaled)
 
-    param_grid = {
-        'n_neighbors': range(min_neighbors, max_neighbors + 1),
-        'weights': ['uniform', 'distance'],
-        'metric': ['euclidean', 'manhattan', 'minkowski']
-    }
+    if len(X_scaled_pca) < 50:
+        max_neighbors = min(10, len(X_scaled_pca) - 1)
+        min_neighbors = max(3, len(X_scaled_pca) // 10)
+    else:
+        max_neighbors = min(30, len(X_scaled_pca) - 1)
+        min_neighbors = max(5, len(X_scaled_pca) // 10)
 
-    socketio.emit("knn_model_trained", {"request_id": request_id}, namespace='/recommendation')
+    # Model comparison: Decision Trees, Random Forests, and k-Nearest Neighbors (kNN)
+    models = [
+        {
+            'name': 'KNN',
+            'estimator': KNeighborsClassifier(),
+            'param_grid': {
+                'n_neighbors': range(min_neighbors, max_neighbors + 1),
+                'weights': ['uniform', 'distance'],
+                'metric': ['euclidean', 'manhattan', 'minkowski']
+            }
+        },
+        {
+            'name': 'Decision Tree',
+            'estimator': DecisionTreeClassifier(random_state=42),
+            'param_grid': {
+                'criterion': ['gini', 'entropy'],
+                'max_depth': range(1, 11),
+                'min_samples_split': range(2, 11),
+                'min_samples_leaf': range(1, 11)
+            }
+        },
+        {
+            'name': 'Random Forest',
+            'estimator': RandomForestClassifier(random_state=42),
+            'param_grid': {
+                'n_estimators': [10, 50, 100, 200],
+                'criterion': ['gini', 'entropy'],
+                'max_depth': [None] + list(range(1, 11)),
+                'min_samples_split': range(2, 11),
+                'min_samples_leaf': range(1, 11)
+            }
+        }
+    ]
+
+    best_score = -1
+    best_model = None
+    best_params = None
+
     n_splits = 5
-
     min_samples_per_class = min(np.bincount(y))
     if min_samples_per_class >= n_splits:
         cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     else:
         cv = LeaveOneOut()
 
-    grid_search = GridSearchCV(estimator=KNeighborsClassifier(), param_grid=param_grid, cv=cv, n_jobs=2,
-                               pre_dispatch='2*n_jobs', scoring='accuracy')
+    for model in models:
+        grid_search = GridSearchCV(estimator=model['estimator'], param_grid=model['param_grid'], cv=cv, n_jobs=2,
+                                   pre_dispatch='2*n_jobs', scoring='accuracy')
+        grid_search.fit(X_scaled_pca, y)
 
-    try:
-        X_scaled = scaler.fit_transform(X)
-        grid_search.fit(X_scaled, y)
-    except Exception as e:
-        emit_error_and_delete_playlist(request_id, "Fit transformer error")
+        if grid_search.best_score_ > best_score:
+            best_score = grid_search.best_score_
+            best_model = model['name']
+            best_params = grid_search.best_params_
 
     rec_track_ids = set()
     for track_id in [d['id'] for d in playlist_data]:
