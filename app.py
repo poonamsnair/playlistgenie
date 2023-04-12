@@ -572,11 +572,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
             'name': 'Random Forest',
             'estimator': RandomForestClassifier(random_state=42),
             'param_grid': {
-                'n_estimators': [10, 50, 100, 200],
+                'n_estimators': [50, 100, 200],
                 'criterion': ['gini', 'entropy'],
-                'max_depth': [None] + list(range(1, 11)),
-                'min_samples_split': range(2, 11),
-                'min_samples_leaf': range(1, 11)
+                'max_depth': [None, 5, 10],
+                'min_samples_split': [2, 5, 10],
+                'min_samples_leaf': [1, 5, 10]
             }
         }
     ]
