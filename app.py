@@ -718,7 +718,10 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_model.fit(X_scaled_pca, y)
 
     # Get top recommended tracks
-    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys)
+    user_top_tracks = sp.current_user_top_tracks(limit=50)
+    user_top_tracks_ids = [track['id'] for track in user_top_tracks['items']]
+    user_top_tracks_audio_features = sp.audio_features(user_top_tracks_ids)
+    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys, user_top_tracks_audio_features)
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
     # Add the recommended tracks to the playlist
