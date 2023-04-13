@@ -13,6 +13,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
+from sklearn.metrics.pairwise import cosine_similarity
 from itertools import zip_longest
 from flask import flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -515,29 +516,42 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys):
+def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys, user_top_tracks_audio_features):
     rec_tracks_data = []
     for track_id in rec_track_ids:
         try:
+            track = make_request_with_backoff(sp.track, track_id)
+            release_year = int(track['album']['release_date'][:4])
+
+            if release_year < 2023:
+                continue
+            
             track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
             if track_audio_features is None:
                 continue
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
+            
+            # Calculate cosine similarity between user's top tracks and recommended tracks
+            similarity = cosine_similarity(np.array(user_top_tracks_audio_features), np.array(track_audio_features).reshape(1, -1))
+            avg_similarity = np.mean(similarity)
+            
             track_genres = get_track_genres(sp, track_id)
-            track_features = track_audio_features + one_hot_encode_genres(track_genres, unique_genres)
-            track_features_scaled = scaler.transform([track_features])
-            track_features_pca = pca.transform(track_features_scaled)
-            track_rating = best_model.predict(track_features_pca)[0]
-            rec_tracks_data.append({'id': track_id, 'rating': track_rating})
-        except Exception as e:
-            print(f"Error retrieving data for track {track_id}: {str(e)}")
-            continue
+            track_features = track_audio_features + track_genres
 
-    # Sort recommended tracks by predicted rating
-    rec_tracks_data.sort(key=lambda x: x['rating'], reverse=True)
+            scaled_track_features = scaler.transform([track_features])
+            pca_track_features = pca.transform(scaled_track_features)
+            predicted_rating = best_model.predict(pca_track_features)[0]
+
+            rec_tracks_data.append((track_id, predicted_rating, avg_similarity))
+
+        except Exception as e:
+            print(f"Error while processing track {track_id}: {e}")
+
+    # Sort tracks by predicted rating and cosine similarity
+    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: (x[1], x[2]), reverse=True)
 
     # Return the top 100 recommended tracks
-    top_rec_track_ids = [data['id'] for data in rec_tracks_data[:100]]
+    top_rec_track_ids = [data[0] for data in sorted_rec_tracks[:100]]
     rec_tracks = []
     for track_id in top_rec_track_ids:
         try:
@@ -556,7 +570,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     
     sp = spotipy.Spotify(auth_manager=auth_manager)
     liked_track_ids = get_user_liked_tracks(sp)
-    playlist = make_request_with_backoff(sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(lambda: sp.playlist(playlist_id))
     tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
@@ -687,11 +701,12 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     seed_artists = playlist_top_artists[:3]
     seed_genres = playlist_top_genres[:2]
+    min_year = 2023
     socketio.emit("top_artists", {"request_id": request_id}, namespace='/recommendation')
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2))['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2), market='from_token', min_year=min_year)['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
