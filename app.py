@@ -126,11 +126,10 @@ def handle_unhandled_exception(e):
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
 
+
 def make_request_with_backoff(func, *args, **kwargs):
     max_retries = 5
     retry_count = 0
-    default_sleep_time = 1  # Default sleep time in seconds
-    
     while retry_count < max_retries:
         try:
             print(f"Attempt #{retry_count + 1}")
@@ -138,7 +137,7 @@ def make_request_with_backoff(func, *args, **kwargs):
         except spotipy.exceptions.SpotifyException as e:
             print(f"SpotifyException caught: {e}")
             if e.http_status == 429:  # Rate limit error
-                sleep_time = int(e.headers.get('Retry-After', default_sleep_time)) + 1
+                sleep_time = (2 ** retry_count) + random.uniform(0, 1)
                 print(f"Rate limit hit, waiting for {sleep_time} seconds")
                 time.sleep(sleep_time)
                 retry_count += 1
