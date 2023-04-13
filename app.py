@@ -515,48 +515,39 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, X_scaled, scaler, pca, sp):
-    def chunks(lst, n):
-        """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i:i + n]
+def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys):
+    rec_tracks_data = []
+    for track_id in rec_track_ids:
+        try:
+            track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
+            if track_audio_features is None:
+                continue
+            track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
+            track_genres = get_track_genres(sp, track_id)
+            track_features = track_audio_features + one_hot_encode_genres(track_genres, unique_genres)
+            track_features_scaled = scaler.transform([track_features])
+            track_features_pca = pca.transform(track_features_scaled)
+            track_rating = best_model.predict(track_features_pca)[0]
+            rec_tracks_data.append({'id': track_id, 'rating': track_rating})
+        except Exception as e:
+            print(f"Error retrieving data for track {track_id}: {str(e)}")
+            continue
 
-    # Retrieve audio features for the recommended tracks
-    chunked_track_ids = list(chunks(recommended_track_ids, 50))
-    audio_features = []
-    for track_ids_chunk in chunked_track_ids:
-        audio_features_chunk = make_request_with_backoff(lambda: sp.audio_features(track_ids_chunk))
-        audio_features.extend(audio_features_chunk)
+    # Sort recommended tracks by predicted rating
+    rec_tracks_data.sort(key=lambda x: x['rating'], reverse=True)
 
-    # Remove NoneType audio features
-    audio_features = [feature for feature in audio_features if feature is not None]
+    # Return the top 100 recommended tracks
+    top_rec_track_ids = [data['id'] for data in rec_tracks_data[:100]]
+    rec_tracks = []
+    for track_id in top_rec_track_ids:
+        try:
+            track = make_request_with_backoff(sp.track, track_id)
+            rec_tracks.append(track)
+        except Exception as e:
+            print(f"Error retrieving data for track {track_id}: {str(e)}")
+            continue
 
-    # Define feature_keys
-    feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
-
-    # Convert audio_features to a list of dictionaries
-    recommended_track_features = []
-    for feature in audio_features:
-        feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
-        recommended_track_features.append(feature_dict)
-
-    # Create a feature matrix for the recommended tracks
-    X_recommended = [[d[key] for key in feature_keys] for d in recommended_track_features]
-
-    # Apply the same transformations as on the training data
-    X_recommended_scaled = scaler.transform(X_recommended)
-    X_recommended_pca = pca.transform(X_recommended_scaled)
-
-    # Now you can pass the processed data to the model
-    predicted_ratings = model.predict_proba(X_recommended_pca)
-
-    print("Recommended tracks before prediction:", recommended_track_ids)
-    
-    sorted_tracks = sorted(zip(recommended_track_ids, predicted_ratings), key=lambda x: x[1][1], reverse=True)
-
-    top_100 = [track[0] for track in sorted_tracks[:100]]
-    return top_100
-
+    return rec_tracks
 
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
@@ -712,13 +703,16 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 
-    # Get the top 100 recommended songs
-    top_100_songs = get_top_100_songs(best_model, list(rec_track_ids), X_scaled_pca, X_scaled, scaler, pca, sp)
+    # Get top recommended tracks
+    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys)
 
-    # Add the top 100 songs to the playlist
-    for track_id in top_100_songs:
+    # Add the recommended tracks to the playlist
+    track_ids = [track['id'] for track in rec_tracks]
+    offset = 0
+    while offset < len(track_ids):
         try:
-            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=[track_id])
+            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_ids[offset:offset+100])
+            offset += 100
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
             emit_error_and_delete_playlist(request_id, f"Adding tracks to playlist: {str(e)}")
