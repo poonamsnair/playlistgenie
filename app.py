@@ -706,7 +706,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=int(len(playlist_data)/2), market='from_token', min_year=min_year)['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token', min_year=min_year)['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
