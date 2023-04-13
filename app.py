@@ -702,7 +702,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_model.fit(X_scaled_pca, y)
 
     # Get the top 100 recommended songs
-    top_100_songs = get_top_100_songs(best_model, rec_track_ids, X_scaled_pca, scaler, pca, sp)
+    top_100_songs = get_top_100_songs(best_model, list(rec_track_ids), X_scaled_pca, scaler, pca, sp)
 
     # Add the top 100 songs to the playlist
     for track_id in top_100_songs:
