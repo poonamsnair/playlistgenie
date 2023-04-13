@@ -332,7 +332,7 @@ def rate_playlist(playlist_id):
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
         for track in unique_tracks:
-            track_info = sp_track(sp, track['track']['id'])
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
@@ -362,7 +362,7 @@ def mobile_rate_playlist(playlist_id):
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
         for track in unique_tracks:
-            track_info = sp_track(sp, track['track']['id'])
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
@@ -427,7 +427,7 @@ def create_playlist(playlist_id):
         # Save the playlist name and ID in the session
         session['rec_playlist_name'] = playlist_name
         user_id = make_request_with_backoff(sp.me)['id']
-        rec_playlist = sp.user_playlist_create(user=user_id, name=playlist_name)
+        rec_playlist = make_request_with_backoff(sp.user_playlist_create, user=user_id, name=playlist_name)
         rec_playlist_id = rec_playlist['id']
         session['rec_playlist_id'] = rec_playlist_id
         print(f"Redirecting to recommendation route with playlist_id: {playlist_id}, rec_playlist_id: {rec_playlist_id}")
