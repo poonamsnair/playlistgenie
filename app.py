@@ -530,13 +530,15 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             if track_audio_features is None:
                 continue
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
-                        
+            print(f"Track ID: {track_id}, Track: {track}, Audio features: {track_audio_features}")
+           
             track_genres = get_track_genres(sp, track_id)
             track_features = track_audio_features + track_genres
-
+            print(f"Track genres: {track_genres}, Final track features: {track_features}")
             scaled_track_features = scaler.transform([track_features])
             pca_track_features = pca.transform(scaled_track_features)
             predicted_rating = best_model.predict(pca_track_features)[0]
+            print(f"Predicted rating for track {track_id}: {predicted_rating}")
 
             rec_tracks_data.append((track_id, predicted_rating))
 
@@ -545,9 +547,11 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
 
     # Sort tracks by predicted rating
     sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: x[1], reverse=True)
+    print("Sorted recommended tracks:", sorted_rec_tracks)
 
     # Return the top 100 recommended tracks
     top_rec_track_ids = [data[0] for data in sorted_rec_tracks[:100]]
+    print("Top 100 recommended track IDs:", top_rec_track_ids)
     rec_tracks = []
     for track_id in top_rec_track_ids:
         try:
