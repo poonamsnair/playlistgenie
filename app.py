@@ -516,7 +516,7 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys):
+def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys, user_top_tracks_audio_features):
     rec_tracks_data = []
     for track_id in rec_track_ids:
         try:
@@ -531,7 +531,10 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
                 continue
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
             print(f"Track ID: {track_id}, Track: {track}, Audio features: {track_audio_features}")
-           
+            # Calculate cosine similarity between user's top tracks and recommended tracks
+            similarity = cosine_similarity(np.array(user_top_tracks_audio_features), np.array(track_audio_features).reshape(1, -1))
+            avg_similarity = np.mean(similarity)
+            
             track_genres = get_track_genres(sp, track_id)
             track_features = track_audio_features + track_genres
             print(f"Track genres: {track_genres}, Final track features: {track_features}")
@@ -539,16 +542,14 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             pca_track_features = pca.transform(scaled_track_features)
             predicted_rating = best_model.predict(pca_track_features)[0]
             print(f"Predicted rating for track {track_id}: {predicted_rating}")
-
-            rec_tracks_data.append((track_id, predicted_rating))
+            rec_tracks_data.append((track_id, predicted_rating, avg_similarity))
 
         except Exception as e:
             print(f"Error while processing track {track_id}: {e}")
 
-    # Sort tracks by predicted rating
-    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: x[1], reverse=True)
+    # Sort tracks by predicted rating and cosine similarity
+    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: (x[1], x[2]), reverse=True)
     print("Sorted recommended tracks:", sorted_rec_tracks)
-
     # Return the top 100 recommended tracks
     top_rec_track_ids = [data[0] for data in sorted_rec_tracks[:100]]
     print("Top 100 recommended track IDs:", top_rec_track_ids)
@@ -562,7 +563,6 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             continue
 
     return rec_tracks
-
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
@@ -701,12 +701,11 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     seed_artists = playlist_top_artists[:3]
     seed_genres = playlist_top_genres[:2]
-    min_year = 2020
     socketio.emit("top_artists", {"request_id": request_id}, namespace='/recommendation')
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token', min_year=min_year)['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token')['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
