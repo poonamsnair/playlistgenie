@@ -523,7 +523,7 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             track = make_request_with_backoff(sp.track, track_id)
             release_year = int(track['album']['release_date'][:4])
 
-            if release_year < 2023:
+            if release_year < 2020:
                 continue
             
             track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
@@ -701,7 +701,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     rec_track_ids = set()
     seed_artists = playlist_top_artists[:3]
     seed_genres = playlist_top_genres[:2]
-    min_year = 2023
+    min_year = 2020
     socketio.emit("top_artists", {"request_id": request_id}, namespace='/recommendation')
 
     for track_id in [d['id'] for d in playlist_data]:
