@@ -516,8 +516,17 @@ def get_audio_features(sp, track_ids):
     return audio_features
 
 def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, sp):
+    def chunks(lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
     # Retrieve audio features for the recommended tracks
-    audio_features = make_request_with_backoff(lambda: sp.audio_features(recommended_track_ids))
+    chunked_track_ids = list(chunks(recommended_track_ids, 50))
+    audio_features = []
+    for track_ids_chunk in chunked_track_ids:
+        audio_features_chunk = make_request_with_backoff(lambda: sp.audio_features(track_ids_chunk))
+        audio_features.extend(audio_features_chunk)
 
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
