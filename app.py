@@ -716,13 +716,16 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     # Get top recommended tracks
     rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys)
-
+    print("Recommended tracks:", rec_tracks)
+    print("Number of recommended tracks:", len(rec_tracks))
     # Add the recommended tracks to the playlist
     track_ids = [track['id'] for track in rec_tracks]
+    print("Extracted track IDs:", track_ids)
     offset = 0
     while offset < len(track_ids):
         try:
             make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_ids[offset:offset+100])
+            print(f"Added tracks {offset}-{offset+99} to the playlist")
             offset += 100
         except Exception as e:
             logging.error(f"Error adding tracks to playlist: {str(e)}")
