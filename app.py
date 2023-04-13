@@ -515,7 +515,7 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, sp):
+def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, X_scaled, scaler, pca, sp):
     def chunks(lst, n):
         """Yield successive n-sized chunks from lst."""
         for i in range(0, len(lst), n):
@@ -556,6 +556,7 @@ def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, s
 
     top_100 = [track[0] for track in sorted_tracks[:100]]
     return top_100
+
 
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
@@ -712,7 +713,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_model.fit(X_scaled_pca, y)
 
     # Get the top 100 recommended songs
-    top_100_songs = get_top_100_songs(best_model, list(rec_track_ids), X_scaled_pca, scaler, pca, sp)
+    top_100_songs = get_top_100_songs(best_model, list(rec_track_ids), X_scaled_pca, X_scaled, scaler, pca, sp)
 
     # Add the top 100 songs to the playlist
     for track_id in top_100_songs:
