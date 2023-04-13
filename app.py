@@ -517,7 +517,7 @@ def get_audio_features(sp, track_ids):
 
 def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, sp):
     # Retrieve audio features for the recommended tracks
-    audio_features = get_audio_features(sp, recommended_track_ids)
+    audio_features = make_request_with_backoff(lambda: sp.audio_features(recommended_track_ids))
 
     # Remove NoneType audio features
     audio_features = [feature for feature in audio_features if feature is not None]
@@ -543,7 +543,8 @@ def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, s
 
     print("Recommended tracks before prediction:", recommended_track_ids)
     
-    sorted_tracks = sorted(zip(recommended_track_ids, predicted_ratings), key=lambda x: x[1], reverse=True)
+    sorted_tracks = sorted(zip(recommended_track_ids, predicted_ratings), key=lambda x: x[1][1], reverse=True)
+
     top_100 = [track[0] for track in sorted_tracks[:100]]
     return top_100
 
