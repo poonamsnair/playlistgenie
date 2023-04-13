@@ -531,10 +531,6 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
                 continue
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
             print(f"Track ID: {track_id}, Track: {track}, Audio features: {track_audio_features}")
-            # Calculate cosine similarity between user's top tracks and recommended tracks
-            similarity = cosine_similarity(np.array(user_top_tracks_audio_features), np.array(track_audio_features).reshape(1, -1))
-            avg_similarity = np.mean(similarity)
-            
             track_genres = get_track_genres(sp, track_id)
             track_features = track_audio_features + track_genres
             print(f"Track genres: {track_genres}, Final track features: {track_features}")
@@ -542,13 +538,13 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             pca_track_features = pca.transform(scaled_track_features)
             predicted_rating = best_model.predict(pca_track_features)[0]
             print(f"Predicted rating for track {track_id}: {predicted_rating}")
-            rec_tracks_data.append((track_id, predicted_rating, avg_similarity))
+            rec_tracks_data.append((track_id, predicted_rating))
 
         except Exception as e:
             print(f"Error while processing track {track_id}: {e}")
 
-    # Sort tracks by predicted rating and cosine similarity
-    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: (x[1], x[2]), reverse=True)
+    # Sort tracks by predicted rating
+    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: x[1], reverse=True)
     print("Sorted recommended tracks:", sorted_rec_tracks)
     # Return the top 100 recommended tracks
     top_rec_track_ids = [data[0] for data in sorted_rec_tracks[:100]]
@@ -718,10 +714,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_model.fit(X_scaled_pca, y)
 
     # Get top recommended tracks
-    user_top_tracks = sp.current_user_top_tracks(limit=50)
-    user_top_tracks_ids = [track['id'] for track in user_top_tracks['items']]
-    user_top_tracks_audio_features = sp.audio_features(user_top_tracks_ids)
-    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys, user_top_tracks_audio_features)
+    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys)
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
     # Add the recommended tracks to the playlist
