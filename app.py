@@ -481,13 +481,6 @@ def get_unique_genres(playlist_data):
 def one_hot_encode_genres(track_genres, unique_genres):
     return [int(genre in track_genres) for genre in unique_genres]
 
-def get_top_100_songs(model, recommended_tracks, X_scaled_pca, scaler, pca):
-    print("Recommended tracks before prediction:", recommended_tracks)
-    predicted_ratings = model.predict_proba(recommended_tracks)
-    sorted_tracks = sorted(zip(recommended_tracks, predicted_ratings), key=lambda x: x[1], reverse=True)
-    top_100 = [track[0] for track in sorted_tracks[:100]]
-    return top_100
-
 def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_artists=5):
     genre_count = {}
     artist_count = {}
@@ -515,6 +508,44 @@ def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_art
     top_artist_ids = [artist[0] for artist in top_artists]
 
     return top_genre_names, top_artist_ids
+
+def get_audio_features(sp, track_ids):
+    audio_features = []
+    for i in range(0, len(track_ids), 50):
+        audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
+    return audio_features
+
+def get_top_100_songs(model, recommended_track_ids, X_scaled_pca, scaler, pca, sp):
+    # Retrieve audio features for the recommended tracks
+    audio_features = get_audio_features(sp, recommended_track_ids)
+
+    # Remove NoneType audio features
+    audio_features = [feature for feature in audio_features if feature is not None]
+
+    # Define feature_keys
+    feature_keys = ["acousticness", "danceability", "duration_ms", "energy", "instrumentalness", "key", "liveness", "loudness", "mode", "speechiness", "tempo", "valence"]
+
+    # Convert audio_features to a list of dictionaries
+    recommended_track_features = []
+    for feature in audio_features:
+        feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
+        recommended_track_features.append(feature_dict)
+
+    # Create a feature matrix for the recommended tracks
+    X_recommended = [[d[key] for key in feature_keys] for d in recommended_track_features]
+
+    # Apply the same transformations as on the training data
+    X_recommended_scaled = scaler.transform(X_recommended)
+    X_recommended_pca = pca.transform(X_recommended_scaled)
+
+    # Now you can pass the processed data to the model
+    predicted_ratings = model.predict_proba(X_recommended_pca)
+
+    print("Recommended tracks before prediction:", recommended_track_ids)
+    
+    sorted_tracks = sorted(zip(recommended_track_ids, predicted_ratings), key=lambda x: x[1], reverse=True)
+    top_100 = [track[0] for track in sorted_tracks[:100]]
+    return top_100
 
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
@@ -650,8 +681,6 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Get playlist-specific top artists, and genres
     playlist_top_genres, playlist_top_artists = get_top_tracks_artists_genres_for_playlist(sp, tracks)
 
-
-
     # Generate recommendations based on user's top tracks, artists, and genres
     rec_track_ids = set()
     seed_artists = playlist_top_artists[:3]
@@ -668,12 +697,12 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         except Exception as e:
             emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
     
-        socketio.emit("top_artistis_done", {"request_id": request_id}, namespace='/recommendation')
+    socketio.emit("top_artists_done", {"request_id": request_id}, namespace='/recommendation')
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 
     # Get the top 100 recommended songs
-    top_100_songs = get_top_100_songs(best_model, rec_track_ids, X_scaled_pca, scaler, pca)
+    top_100_songs = get_top_100_songs(best_model, rec_track_ids, X_scaled_pca, scaler, pca, sp)
 
     # Add the top 100 songs to the playlist
     for track_id in top_100_songs:
