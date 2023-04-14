@@ -487,11 +487,11 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def extract_best_model_params(best_model, feature_keys):
+def extract_best_model_params(top_rated_tracks, feature_keys):
     best_params = {}
     for key in feature_keys:
-        if hasattr(best_model, f"target_{key}"):
-            best_params[f"target_{key}"] = getattr(best_model, f"target_{key}")
+        feature_values = [track['audio_features'][key] for track in top_rated_tracks]
+        best_params[f"target_{key}"] = sum(feature_values) / len(feature_values)
     return best_params
 
 def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20):
@@ -705,8 +705,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # Get top rated tracks from the user-selected playlist
     top_rated_tracks = sorted(playlist_data, key=lambda x: x['ratings'], reverse=True)[:5]
 
-    # Extract target parameters from the best model
-    best_model_params = extract_best_model_params(best_model, feature_keys)
+    # Extract target parameters from the top rated tracks
+    best_model_params = extract_best_model_params(top_rated_tracks, feature_keys)
 
     # Get top recommended tracks using the top rated tracks and best model parameters
     rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params)
