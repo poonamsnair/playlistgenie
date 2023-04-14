@@ -495,7 +495,6 @@ def extract_best_model_params(top_rated_tracks):
 
     return best_params
 
-
 def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20, exclude_tracks=None):
     if exclude_tracks is None:
         exclude_tracks = []
@@ -712,7 +711,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     top_rated_tracks = sorted(playlist_data, key=lambda x: x['ratings'], reverse=True)[:5]
 
     # Extract target parameters from the top rated tracks
-    best_model_params = extract_best_model_params(top_rated_tracks, feature_keys)
+    best_model_params = extract_best_model_params(top_rated_tracks)
 
     # Get user liked tracks
     user_liked_track_ids = get_user_liked_tracks(sp)
