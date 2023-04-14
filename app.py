@@ -496,7 +496,7 @@ def get_random_tracks(sp, num_tracks=1000, batch_size=50):
         random_tracks.extend(tracks)
     return random_tracks[:num_tracks]
 
-def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
+def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
     found_tracks = 0
     top_recommendations = []
 
@@ -522,10 +522,11 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
 
     # Pre-process random tracks for model prediction
     X_random = []
-    for track, feature in zip(random_tracks, audio_features):
-        feature_dict = {key: feature[key] for key in feature_keys}
-        feature_dict['genres'] = track['genres']
-        X_random.append([feature_dict[key] for key in feature_keys] + one_hot_encode_genres(feature_dict['genres'], unique_genres))
+    for track, audio_feature in zip(random_tracks, audio_features):
+        if audio_feature is not None:
+            feature_dict = {key: audio_feature[key] for key in feature_keys}
+            feature_dict['genres'] = track['genres']
+            X_random.append([feature_dict[key] for key in feature_keys] + one_hot_encode_genres(feature_dict['genres'], unique_genres))
 
     # Scale and apply PCA to the features of random tracks
     X_random_scaled = scaler.transform(X_random)
@@ -545,13 +546,12 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
 
     return top_recommendations[:num_recommendations]
 
+
+
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    liked_track_ids = get_user_liked_tracks(sp)
-    playlist = make_request_with_backoff(sp.playlist, playlist_id)
-    tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
     track_ids = list(ratings.keys())
@@ -678,7 +678,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     best_model.fit(X_scaled_pca, y)
 
     # Get top recommended tracks
-    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp)
+    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp)
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
     
