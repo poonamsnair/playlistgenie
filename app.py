@@ -496,7 +496,14 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
         for year in range(current_year, current_year + 1):
             for month in range(1, 13):
                 query = f"({genre_query}) year:{year} month:{month}"
-                results = sp.search(query, limit=batch_size, offset=0, type='track', market=None)
+                params = {
+                    'q': query,
+                    'limit': batch_size,
+                    'offset': 0,
+                    'type': 'track',
+                    'market': None,
+                }
+                results = sp.search(params=params)
                 recent_tracks.extend(results['tracks']['items'])
                 time.sleep(sleep_time)
 
@@ -540,6 +547,7 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
                 break
 
     return top_recommendations[:num_recommendations]
+
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
