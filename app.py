@@ -508,7 +508,7 @@ def extract_best_model_params(top_rated_tracks):
 
     return best_params
 
-def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popularity_range=(30, 70), max_retries=10, max_requests_per_second=20, exclude_tracks=None):
+def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=10, max_requests_per_second=20, exclude_tracks=None):
     if exclude_tracks is None:
         exclude_tracks = []
         
@@ -516,6 +516,7 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
         raise ValueError("The number of seed tracks should not exceed 5.")
         
     random_tracks = []
+    unique_track_ids = set()
 
     while len(random_tracks) < num_tracks:
         print(f"Getting recommendations, current random_tracks length: {len(random_tracks)}")
@@ -538,10 +539,16 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
             if popularity_range[0] <= track['popularity'] <= popularity_range[1]
             and (track.get('album') is None or track['album']['release_date'][:4] == '2023')
             and track['id'] not in exclude_tracks
+            and track['id'] not in unique_track_ids
         ]
-        random_tracks.extend(filtered_tracks)
+
+        # Add filtered tracks to random_tracks and unique_track_ids
+        for track in filtered_tracks:
+            random_tracks.append(track)
+            unique_track_ids.add(track['id'])
 
     return random_tracks[:num_tracks]
+
 
 
 def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_tracks=100, exclude_tracks=None, num_recommendations=20, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20, ):
