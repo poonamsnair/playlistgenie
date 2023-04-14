@@ -273,7 +273,6 @@ def playlists():
     user_playlists = make_request_with_backoff(sp.current_user_playlists, limit=api_limit, offset=api_offset)
     user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    total_playlists = user_playlists['total']
     all_playlists = user_playlists['items']
     playlist_data = []
     unique_track_counts = {}
@@ -488,20 +487,46 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_random_tracks(sp, num_tracks=1000, batch_size=50):
+def extract_best_model_params(best_model, feature_keys):
+    best_params = {}
+    for key in feature_keys:
+        if hasattr(best_model, f"target_{key}"):
+            best_params[f"target_{key}"] = getattr(best_model, f"target_{key}")
+    return best_params
+
+def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20):
     random_tracks = []
+    
     while len(random_tracks) < num_tracks:
-        random_offset = random.randint(0, 1000 - batch_size)
-        tracks = make_request_with_backoff(sp.search, q='year:2023', type='track', limit=batch_size, offset=random_offset)['tracks']['items']
-        random_tracks.extend(tracks)
+        # Get recommendations based on seed tracks and best model parameters with back-off logic
+        recommended_tracks = make_request_with_backoff(
+            sp.recommendations,
+            seed_tracks=seed_tracks,
+            limit=100,
+            max_retries=max_retries,
+            max_requests_per_second=max_requests_per_second,
+            **best_model_params
+        )
+        
+        # Filter tracks by popularity and release year
+        filtered_tracks = [
+            track for track in recommended_tracks
+            if popularity_range[0] <= track['popularity'] <= popularity_range[1]
+            and (track.get('album') is None or track['album']['release_date'][:4] == '2023')
+        ]
+        random_tracks.extend(filtered_tracks)
+
     return random_tracks[:num_tracks]
 
-def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
+
+
+def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
     found_tracks = 0
     top_recommendations = []
 
     # Generate a large pool of random tracks released in 2023
-    random_tracks = get_random_tracks(sp)
+    seed_tracks = [track['id'] for track in top_rated_tracks]
+    random_tracks = get_random_tracks(sp, seed_tracks, best_model_params)
 
     # Split random tracks into batches
     random_track_batches = [random_tracks[i:i + batch_size] for i in range(0, len(random_tracks), batch_size)]
@@ -677,8 +702,15 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 
-    # Get top recommended tracks
-    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp)
+    # Get top rated tracks from the user-selected playlist
+    top_rated_tracks = sorted(playlist_data, key=lambda x: x['ratings'], reverse=True)[:5]
+
+    # Extract target parameters from the best model
+    best_model_params = extract_best_model_params(best_model, feature_keys)
+
+    # Get top recommended tracks using the top rated tracks and best model parameters
+    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params)
+
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
     
