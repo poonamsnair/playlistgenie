@@ -2,6 +2,7 @@ import eventlet
 from flask import Flask, redirect, request, session, url_for, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_bootstrap import Bootstrap
+import inspect
 import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyOAuth
@@ -127,12 +128,15 @@ def handle_unhandled_exception(e):
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
 
-def make_request_with_backoff(func, *args, max_retries=10, max_requests_per_second=20, timeout=10, **kwargs):
+def make_request_with_backoff(func, *args, max_retries=10, max_requests_per_second=20, **kwargs):
     retry_count = 0
     while retry_count < max_retries:
         try:
             print(f"Attempt #{retry_count + 1}")
-            return func(*args, timeout=timeout, **kwargs)
+            if 'timeout' in inspect.signature(func).parameters:  # Check if timeout is accepted
+                return func(*args, timeout=10, **kwargs)
+            else:
+                return func(*args, **kwargs)
         except (spotipy.exceptions.SpotifyException, requests.exceptions.RequestException) as e:
             print(f"Exception caught: {e}")
             if isinstance(e, spotipy.exceptions.SpotifyException) and e.http_status == 429:  # Rate limit error
@@ -153,6 +157,7 @@ def make_request_with_backoff(func, *args, max_retries=10, max_requests_per_seco
             time.sleep(1)
 
     raise Exception("Max retries reached")
+
 
 
 @app.route('/')
