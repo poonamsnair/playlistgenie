@@ -484,7 +484,7 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, num_recommendations=100, rating_threshold=8, batch_size=20, sleep_time=1):
+def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=100, rating_threshold=8, max_retries=5):
     current_year = 2023
     found_tracks = 0
     top_recommendations = []
