@@ -464,9 +464,9 @@ def get_user_liked_tracks(sp, limit=50):
     return liked_track_ids
 
 def get_track_genres(sp, track_id):
-    track = make_request_with_backoff(sp.track(track_id))
+    track = make_request_with_backoff(sp.track, track_id)
     artist_id = track['artists'][0]['id']
-    artist = make_request_with_backoff(sp.artist(artist_id))
+    artist = make_request_with_backoff(sp.artist, artist_id)
     return artist['genres']
 
 def get_unique_genres(playlist_data):
@@ -546,7 +546,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
     sp = spotipy.Spotify(auth_manager=auth_manager)
     liked_track_ids = get_user_liked_tracks(sp)
-    playlist = make_request_with_backoff(sp.playlist(playlist_id))
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
