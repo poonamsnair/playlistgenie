@@ -526,7 +526,7 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             track = make_request_with_backoff(sp.track, track_id)
             release_year = int(track['album']['release_date'][:4])
 
-            if release_year < 2020:
+            if release_year < 2022:
                 continue
             
             track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
