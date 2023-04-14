@@ -490,7 +490,7 @@ def get_audio_features(sp, track_ids):
 def extract_best_model_params(top_rated_tracks, feature_keys):
     best_params = {}
     for key in feature_keys:
-        feature_values = [track['audio_features'][key] for track in top_rated_tracks]
+        feature_values = [track[key] for track in top_rated_tracks]
         best_params[f"target_{key}"] = sum(feature_values) / len(feature_values)
     return best_params
 
