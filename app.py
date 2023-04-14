@@ -535,8 +535,9 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
             print(f"Track ID: {track_id}, Track: {track}, Audio features: {track_audio_features}")
             track_genres = get_track_genres(sp, track_id)
-            track_features = track_audio_features + track_genres
-            print(f"Track genres: {track_genres}, Final track features: {track_features}")
+            track_genres_encoded = [1 if genre in track_genres else 0 for genre in unique_genres]
+            track_features = track_audio_features + track_genres_encoded
+            print(f"Track genres: {track_genres_encoded}, Final track features: {track_features}")
             scaled_track_features = scaler.transform([track_features])
             pca_track_features = pca.transform(scaled_track_features)
             predicted_rating = best_model.predict(pca_track_features)[0]
