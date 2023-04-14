@@ -162,7 +162,7 @@ def login():
                 sp = spotipy.Spotify(auth_manager=auth_manager)
                 
                 # Use the custom function to make requests
-                user_info = make_request_with_backoff(lambda: sp.me)
+                user_info = make_request_with_backoff(sp.me)
                 
                 print(f"{user_info['display_name']} ({user_info['id']}) logged in")
                 return redirect('/playlists')
@@ -217,16 +217,16 @@ def remove_duplicates(tracks):
 
 
 def delete_playlist(sp, playlist_id):
-    user_id = make_request_with_backoff(lambda: sp.current_user)["id"]
+    user_id = make_request_with_backoff(sp.current_user)["id"]
     sp.user_playlist_unfollow(user=user_id, playlist_id=playlist_id)
 
 def get_playlist_tracks(sp, playlist_id):
-    playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     return playlist['tracks']['items']
 
 
 def sp_track(sp, track_id):
-    return make_request_with_backoff(lambda: sp.track, track_id)
+    return make_request_with_backoff(sp.track, track_id)
 
 def paginate_playlists(playlists: List, limit: int, offset: int):
     start = offset
@@ -235,7 +235,7 @@ def paginate_playlists(playlists: List, limit: int, offset: int):
 
 def check_playlist_before_submit(sp, playlist_id, initial_tracks):
     # Fetch the current playlist
-    current_playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    current_playlist = make_request_with_backoff(sp.playlist, playlist_id)
 
     # Check if the playlist still exists
     if not current_playlist:
@@ -269,15 +269,15 @@ def playlists():
     previous_offset = max(offset - limit, 0)
     api_limit = 50
     api_offset = (offset // api_limit) * api_limit
-    user_playlists = make_request_with_backoff(lambda: sp.current_user_playlists, limit=api_limit, offset=api_offset)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_playlists = make_request_with_backoff(sp.current_user_playlists, limit=api_limit, offset=api_offset)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
     total_playlists = user_playlists['total']
     all_playlists = user_playlists['items']
     playlist_data = []
     unique_track_counts = {}
     for playlist in all_playlists:
-        tracks = make_request_with_backoff(lambda: get_playlist_tracks, sp, playlist['id'])
+        tracks = make_request_with_backoff(get_playlist_tracks, sp, playlist['id'])
         unique_tracks = remove_duplicates(tracks) 
         if len(unique_tracks) >= 1:
             playlist_data.append({
@@ -313,9 +313,9 @@ def rate_playlist(playlist_id):
     if not auth_manager.get_cached_token():
         return redirect('/')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
     if check_result['status'] == "error":
         message = check_result['message']
@@ -328,7 +328,7 @@ def rate_playlist(playlist_id):
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
         for track in unique_tracks:
-            track_info = make_request_with_backoff(lambda: sp.track, track['track']['id'])
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
@@ -343,9 +343,9 @@ def mobile_rate_playlist(playlist_id):
     if not auth_manager.get_cached_token():
         return redirect('/')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
     if check_result['status'] == "error":
         message = check_result['message']
@@ -358,7 +358,7 @@ def mobile_rate_playlist(playlist_id):
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
         for track in unique_tracks:
-            track_info = make_request_with_backoff(lambda: sp.track, track['track']['id'])
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
@@ -374,9 +374,9 @@ def save_ratings(playlist_id):
     if not auth_manager.get_cached_token():
         return redirect('/')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     # Check if the playlist exists and hasn't been modified
     check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
     if check_result['status'] == "error":
@@ -406,9 +406,9 @@ def create_playlist(playlist_id):
         print("No cached token found, redirecting to /")
         return redirect('/')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    playlist = make_request_with_backoff(lambda: sp.playlist, playlist_id)
+    playlist = make_request_with_backoff(sp.playlist, playlist_id)
     check_result = check_playlist_before_submit(sp, playlist_id, playlist['tracks']['items'])
     if check_result['status'] == "error":
         message = check_result['message']
@@ -422,8 +422,8 @@ def create_playlist(playlist_id):
             return render_template('error.html', username=username, message="Playlist name is too long.")
         # Save the playlist name and ID in the session
         session['rec_playlist_name'] = playlist_name
-        user_id = make_request_with_backoff(lambda: sp.me)['id']
-        rec_playlist = make_request_with_backoff(lambda: sp.user_playlist_create, user=user_id, name=playlist_name)
+        user_id = make_request_with_backoff(sp.me)['id']
+        rec_playlist = make_request_with_backoff(sp.user_playlist_create, user=user_id, name=playlist_name)
         rec_playlist_id = rec_playlist['id']
         session['rec_playlist_id'] = rec_playlist_id
         print(f"Redirecting to recommendation route with playlist_id: {playlist_id}, rec_playlist_id: {rec_playlist_id}")
@@ -439,9 +439,9 @@ def recommendation(playlist_id, rec_playlist_id):
     if not auth_manager.get_cached_token():
         return redirect('/')
     sp = spotipy.Spotify(auth_manager=auth_manager)
-    user_profile = make_request_with_backoff(lambda: sp.me)
+    user_profile = make_request_with_backoff(sp.me)
     username = user_profile['display_name'] 
-    user_id = make_request_with_backoff(lambda: sp.me)['id']
+    user_id = make_request_with_backoff(sp.me)['id']
     session['spotify_username'] = user_id
     session['username'] = username
     ratings = session['ratings']
@@ -455,7 +455,7 @@ def get_user_liked_tracks(sp):
     limit = 50
 
     while True:
-        results = make_request_with_backoff(lambda: sp.current_user_saved_tracks(limit=limit, offset=offset))
+        results = make_request_with_backoff(sp.current_user_saved_tracks(limit=limit, offset=offset))
         if not results['items']:
             break
 
@@ -467,9 +467,9 @@ def get_user_liked_tracks(sp):
     return liked_track_ids
 
 def get_track_genres(sp, track_id):
-    track = make_request_with_backoff(lambda: sp.track(track_id))
+    track = make_request_with_backoff(sp.track(track_id))
     artist_id = track['artists'][0]['id']
-    artist = make_request_with_backoff(lambda: sp.artist(artist_id))
+    artist = make_request_with_backoff(sp.artist(artist_id))
     return artist['genres']
 
 def get_unique_genres(playlist_data):
@@ -494,7 +494,7 @@ def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_art
             else:
                 genre_count[genre] += 1
 
-        related_artists = make_request_with_backoff(lambda: sp.artist_related_artists(track['artists'][0]['id']))['artists']
+        related_artists = make_request_with_backoff(sp.artist_related_artists(track['artists'][0]['id']))['artists']
         for artist in related_artists:
             if artist['id'] not in artist_count:
                 artist_count[artist['id']] = 1
@@ -512,20 +512,20 @@ def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_art
 def get_audio_features(sp, track_ids):
     audio_features = []
     for i in range(0, len(track_ids), 50):
-        audio_features.extend(make_request_with_backoff(lambda: sp.audio_features, track_ids[i:i+50]))
+        audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
 def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys):
     rec_tracks_data = []
     for track_id in rec_track_ids:
         try:
-            track = make_request_with_backoff(lambda: sp.track, track_id)
+            track = make_request_with_backoff(sp.track, track_id)
             release_year = int(track['album']['release_date'][:4])
 
             if release_year < 2022:
                 continue
             
-            track_audio_features = make_request_with_backoff(lambda: sp.audio_features, track_id)
+            track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
             if track_audio_features is None:
                 continue
             track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
@@ -552,7 +552,7 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
     rec_tracks = []
     for track_id in top_rec_track_ids:
         try:
-            track = make_request_with_backoff(lambda: sp.track, track_id)
+            track = make_request_with_backoff(sp.track, track_id)
             rec_tracks.append(track)
         except Exception as e:
             print(f"Error retrieving data for track {track_id}: {str(e)}")
@@ -561,12 +561,12 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
     return rec_tracks
 
 def get_recently_played(sp):
-    recently_played = make_request_with_backoff(lambda: sp.current_user_recently_played(limit=50))
+    recently_played = make_request_with_backoff(sp.current_user_recently_played(limit=50))
     recently_played_ids = [item['track']['id'] for item in recently_played['items']]
     return recently_played_ids
 
 def get_playlist_track_ids(sp, user_id, playlist_name):
-    playlists = make_request_with_backoff(lambda: sp.user_playlists(user_id))
+    playlists = make_request_with_backoff(sp.user_playlists(user_id))
     target_playlist_id = None
     for playlist in playlists['items']:
         if playlist['name'] == playlist_name:
@@ -576,7 +576,7 @@ def get_playlist_track_ids(sp, user_id, playlist_name):
     if target_playlist_id is None:
         return []
 
-    results = make_request_with_backoff(lambda: sp.playlist_tracks(target_playlist_id))
+    results = make_request_with_backoff(sp.playlist_tracks(target_playlist_id))
     track_ids = [item['track']['id'] for item in results['items']]
     return track_ids
 
@@ -592,7 +592,7 @@ def get_liked_songs_with_similar_genres(sp, seed_genres):
 
     for i in range(0, len(liked_track_ids), 50):
         batch_track_ids = liked_track_ids[i:i+50]
-        tracks = make_request_with_backoff(lambda: sp.tracks(batch_track_ids))
+        tracks = make_request_with_backoff(sp.tracks(batch_track_ids))
 
         for track in tracks['tracks']:
             track_id = track['id']
@@ -610,7 +610,7 @@ def get_audio_features_for_tracks(sp, track_ids):
 
     for i in range(0, len(track_ids), 100):
         batch_track_ids = track_ids[i:i+100]
-        batch_audio_features = make_request_with_backoff(lambda: sp.audio_features(batch_track_ids))
+        batch_audio_features = make_request_with_backoff(sp.audio_features(batch_track_ids))
         audio_features.extend(batch_audio_features)
 
     return audio_features
@@ -625,7 +625,7 @@ def generate_ratings_for_liked_songs(sp, liked_songs, spotify_username):
 
     for song in liked_songs:
         track_id = song['id']
-        track = make_request_with_backoff(lambda: sp.track(track_id))
+        track = make_request_with_backoff(sp.track(track_id))
         popularity = track['popularity']
 
         recency_score = 0
@@ -653,7 +653,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     
     sp = spotipy.Spotify(auth_manager=auth_manager)
     liked_track_ids = get_user_liked_tracks(sp)
-    playlist = make_request_with_backoff(lambda: sp.playlist(playlist_id))
+    playlist = make_request_with_backoff(sp.playlist(playlist_id))
     tracks = playlist['tracks']['items']
     if not ratings:
         return redirect(url_for('rate_playlist', playlist_id=playlist_id))
@@ -704,7 +704,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     for song in liked_songs:
         track_id = song['id']
         if track_id not in ratings:
-            audio_feature = make_request_with_backoff(lambda: sp.audio_features, [track_id])[0]
+            audio_feature = make_request_with_backoff(sp.audio_features, [track_id])[0]
             if audio_feature:
                 feature_dict = {key: audio_feature[key] for key in feature_keys}
                 feature_dict['ratings'] = liked_songs_ratings[track_id]
@@ -809,7 +809,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     for track_id in [d['id'] for d in playlist_data]:
         try:
-            rec_tracks = make_request_with_backoff(lambda: sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token')['tracks']
+            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token')['tracks']
             for track in rec_tracks:
                 # Exclude tracks that are already in the seed playlist or liked by the user
                 if track['id'] not in track_ids and track['id'] not in liked_track_ids:
@@ -831,7 +831,7 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     offset = 0
     while offset < len(track_ids):
         try:
-            make_request_with_backoff(lambda: sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_ids[offset:offset+100])
+            make_request_with_backoff(sp.user_playlist_add_tracks, user=spotify_username, playlist_id=rec_playlist_id, tracks=track_ids[offset:offset+100])
             print(f"Added tracks {offset}-{offset+99} to the playlist")
             offset += 100
         except Exception as e:
