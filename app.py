@@ -487,11 +487,11 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def extract_best_model_params(top_rated_tracks, feature_keys):
+def extract_best_model_params(top_rated_tracks):
     best_params = {}
-    for key in feature_keys:
-        feature_values = [track[key] for track in top_rated_tracks]
-        best_params[f"target_{key}"] = sum(feature_values) / len(feature_values)
+    best_params["target_tempo"] = round(sum(track["tempo"] for track in top_rated_tracks) / len(top_rated_tracks), 1)
+    best_params["target_popularity"] = round(sum(track["popularity"] for track in top_rated_tracks) // len(top_rated_tracks) / 5) * 5
+    best_params["target_energy"] = round(sum(track["energy"] for track in top_rated_tracks) / len(top_rated_tracks), 1)
     return best_params
 
 def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20):
