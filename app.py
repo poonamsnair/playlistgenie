@@ -494,13 +494,19 @@ def extract_best_model_params(top_rated_tracks, feature_keys):
     best_params["target_energy"] = round(sum(track.get("energy", 0.5) for track in top_rated_tracks) / len(top_rated_tracks), 1)
     for key in feature_keys:
         feature_values = [track.get(key, 0) for track in top_rated_tracks]
-        best_params[f"target_{key}"] = round(sum(feature_values) / len(feature_values), 1)
+        if key in ['key', 'mode']:
+            best_params[f"target_{key}"] = round(sum(feature_values) / len(feature_values))
+        else:
+            best_params[f"target_{key}"] = round(sum(feature_values) / len(feature_values), 1)
     return best_params
 
 
-def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20):
-    random_tracks = []
+def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20, exclude_tracks=None):
+    if exclude_tracks is None:
+        exclude_tracks = []
     
+    random_tracks = []
+
     while len(random_tracks) < num_tracks:
         # Get recommendations based on seed tracks and best model parameters with back-off logic
         recommended_tracks = make_request_with_backoff(
@@ -511,19 +517,21 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popul
             max_requests_per_second=max_requests_per_second,
             **best_model_params
         )
-        
-        # Filter tracks by popularity and release year
+
+        # Filter tracks by popularity, release year, and exclude tracks
         filtered_tracks = [
             track for track in recommended_tracks
             if popularity_range[0] <= track['popularity'] <= popularity_range[1]
             and (track.get('album') is None or track['album']['release_date'][:4] == '2023')
+            and track['id'] not in exclude_tracks
         ]
         random_tracks.extend(filtered_tracks)
 
     return random_tracks[:num_tracks]
 
 
-def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
+
+def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_tracks=100, exclude_tracks=None, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20, ):
     found_tracks = 0
     top_recommendations = []
 
@@ -704,16 +712,19 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
 
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
-
+    
     # Get top rated tracks from the user-selected playlist
     top_rated_tracks = sorted(playlist_data, key=lambda x: x['ratings'], reverse=True)[:5]
 
     # Extract target parameters from the top rated tracks
     best_model_params = extract_best_model_params(top_rated_tracks, feature_keys)
 
-    # Get top recommended tracks using the top rated tracks and best model parameters
-    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params)
+    # Get user liked tracks
+    user_liked_track_ids = get_user_liked_tracks(sp)
 
+    # Get top recommended tracks using the top rated tracks and best model parameters
+    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, exclude_tracks=user_liked_track_ids)
+    
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
     
