@@ -445,28 +445,23 @@ def recommendation(playlist_id, rec_playlist_id):
     threading.Thread(target=background_recommendation, args=(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, user_id)).start()
     return render_template("recommendation_progress.html", request_id=request_id, username=username)
 
-def get_user_liked_tracks(sp):
-    liked_track_ids = set()
-    offset = 0
-    limit = 50
 
+def get_user_liked_tracks(sp, limit=50):
+    liked_track_ids = []
+    offset = 0
     while True:
-        results = make_request_with_backoff(sp.current_user_saved_tracks(limit=limit, offset=offset))
-        if not results['items']:
+        try:
+            results = make_request_with_backoff(sp.current_user_saved_tracks, limit=limit, offset=offset)
+            if not results['items']:
+                break
+
+            liked_track_ids.extend([item['track']['id'] for item in results['items']])
+            offset += limit
+        except Exception as e:
+            logging.error(f"Error in get_user_liked_tracks: {str(e)}")
             break
 
-        for item in results['items']:
-            liked_track_ids.add(item['track']['id'])
-        
-        offset += limit
-
     return liked_track_ids
-
-def get_audio_features(sp, track_ids):
-    audio_features = []
-    for i in range(0, len(track_ids), 50):
-        audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
-    return audio_features
 
 def get_track_genres(sp, track_id):
     track = make_request_with_backoff(sp.track(track_id))
@@ -483,6 +478,11 @@ def get_unique_genres(playlist_data):
 def one_hot_encode_genres(track_genres, unique_genres):
     return [int(genre in track_genres) for genre in unique_genres]
 
+def get_audio_features(sp, track_ids):
+    audio_features = []
+    for i in range(0, len(track_ids), 50):
+        audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
+    return audio_features
 
 def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, rating_threshold=4.5, batch_size=50, sleep_time=1):
     current_year = 2023
@@ -544,7 +544,6 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
-    
     sp = spotipy.Spotify(auth_manager=auth_manager)
     liked_track_ids = get_user_liked_tracks(sp)
     playlist = make_request_with_backoff(sp.playlist(playlist_id))
@@ -574,9 +573,9 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         emit_error_and_delete_playlist(request_id, "Less than 5 tracks")
     elif len(audio_features) > 100:
         emit_error_and_delete_playlist(request_id, "More than 100 tracks")
-    
+
   # Convert audio_features to a list of dictionaries
-    playlist_data = [] 
+    playlist_data = []
     for feature in audio_features:
         feature_dict = {key: feature[key] for key in feature if key not in ['type', 'uri', 'track_href', 'analysis_url']}
         feature_dict['ratings'] = ratings[feature['id']]
@@ -584,8 +583,8 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         playlist_data.append(feature_dict)
 
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
-   
-    unique_genres = get_unique_genres(playlist_data)    
+
+    unique_genres = get_unique_genres(playlist_data)
     X = [[d[key] for key in feature_keys] + one_hot_encode_genres(d['genres'], unique_genres) for d in playlist_data]
     y = [d['ratings'] for d in playlist_data]
 
