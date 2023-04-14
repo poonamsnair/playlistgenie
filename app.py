@@ -487,7 +487,7 @@ def get_audio_features(sp, track_ids):
 def get_random_tracks(sp, num_tracks=1000, batch_size=50):
     random_tracks = []
     while len(random_tracks) < num_tracks:
-        random_offset = random.randint(0, 2000000)  # Choose a random offset within Spotify's catalog
+        random_offset = random.randint(0, 10000 - batch_size)
         tracks = make_request_with_backoff(sp.search, q='year:2023', type='track', limit=batch_size, offset=random_offset)['tracks']['items']
         random_tracks.extend(tracks)
     return random_tracks[:num_tracks]
