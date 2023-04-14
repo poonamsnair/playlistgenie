@@ -225,9 +225,6 @@ def get_playlist_tracks(sp, playlist_id):
     return playlist['tracks']['items']
 
 
-def sp_track(sp, track_id):
-    return make_request_with_backoff(sp.track, track_id)
-
 def paginate_playlists(playlists: List, limit: int, offset: int):
     start = offset
     end = offset + limit
@@ -325,12 +322,25 @@ def rate_playlist(playlist_id):
     try:
         tracks = get_playlist_tracks(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
+
+        track_ids = [track['track']['id'] for track in unique_tracks]
+        track_id_chunks = [track_ids[i:i + 50] for i in range(0, len(track_ids), 50)]
+
+        track_info_list = []
+        for track_ids_chunk in track_id_chunks:
+            track_info_chunk = make_request_with_backoff(sp.tracks, track_ids_chunk)
+            track_info_list.extend(track_info_chunk)
+
+        track_info_dict = {track_info['id']: track_info for track_info in track_info_list}
+
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
+
         for track in unique_tracks:
-            track_info = make_request_with_backoff(sp.track, track['track']['id'])
+            track_id = track['track']['id']
+            track_info = track_info_dict[track_id]
             track['spotify_uri'] = track_info['uri']
-        # Render the template without the access token
+
         return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
     except Exception as e:
         return render_template('error.html', username=username, message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
@@ -355,16 +365,19 @@ def mobile_rate_playlist(playlist_id):
     try:
         tracks = get_playlist_tracks(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
+        
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
-        for track in unique_tracks:
-            track_info = make_request_with_backoff(sp.track, track['track']['id'])
+
+        track_ids = [track['track']['id'] for track in unique_tracks]
+        track_infos = make_request_with_backoff(sp.tracks, track_ids)
+
+        for track, track_info in zip(unique_tracks, track_infos):
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
     except Exception as e:
         return render_template('error.html', username=username, message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
-
 
 
 @app.route('/save_ratings/<playlist_id>/', methods=['POST'])
@@ -509,56 +522,63 @@ def get_top_tracks_artists_genres_for_playlist(sp, tracks, num_genres=5, num_art
 
     return top_genre_names, top_artist_ids
 
-def get_audio_features(sp, track_ids):
-    audio_features = []
-    for i in range(0, len(track_ids), 50):
-        audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
-    return audio_features
 
-def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys):
-    rec_tracks_data = []
-    for track_id in rec_track_ids:
-        try:
-            track = make_request_with_backoff(sp.track, track_id)
-            release_year = int(track['album']['release_date'][:4])
+def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, seed_genres, num_recommendations=100, rating_threshold=4.5, batch_size=50, sleep_time=1):
+    current_year = 2023
+    found_tracks = 0
+    top_recommendations = []
 
-            if release_year < 2022:
-                continue
-            
-            track_audio_features = make_request_with_backoff(sp.audio_features, track_id)
-            if track_audio_features is None:
-                continue
-            track_audio_features = [track_audio_features[0][key] if track_audio_features[0][key] is not None else 0 for key in feature_keys]
-            print(f"Track ID: {track_id}, Track: {track}, Audio features: {track_audio_features}")
-            track_genres = get_track_genres(sp, track_id)
-            track_genres_encoded = [1 if genre in track_genres else 0 for genre in unique_genres]
-            track_features = track_audio_features + track_genres_encoded
-            print(f"Track genres: {track_genres_encoded}, Final track features: {track_features}")
-            scaled_track_features = scaler.transform([track_features])
-            pca_track_features = pca.transform(scaled_track_features)
-            predicted_rating = best_model.predict(pca_track_features)[0]
-            print(f"Predicted rating for track {track_id}: {predicted_rating}")
-            rec_tracks_data.append((track_id, predicted_rating))
+    genre_query = " OR ".join([f"genre:{genre}" for genre in seed_genres])
 
-        except Exception as e:
-            print(f"Error while processing track {track_id}: {e}")
+    while found_tracks < num_recommendations:
+        recent_tracks = []
+        for year in range(current_year, current_year + 1):
+            for month in range(1, 13):
+                query = f"({genre_query}) year:{year} month:{month}"
+                results = sp.search(query, limit=batch_size, offset=0, type='track', market=None)
+                recent_tracks.extend(results['tracks']['items'])
+                time.sleep(sleep_time)
 
-    # Sort tracks by predicted rating
-    sorted_rec_tracks = sorted(rec_tracks_data, key=lambda x: x[1], reverse=True)
-    print("Sorted recommended tracks:", sorted_rec_tracks)
-    # Return the top 100 recommended tracks
-    top_rec_track_ids = [data[0] for data in sorted_rec_tracks[:100]]
-    print("Top 100 recommended track IDs:", top_rec_track_ids)
-    rec_tracks = []
-    for track_id in top_rec_track_ids:
-        try:
-            track = make_request_with_backoff(sp.track, track_id)
-            rec_tracks.append(track)
-        except Exception as e:
-            print(f"Error retrieving data for track {track_id}: {str(e)}")
-            continue
+        # Filter out tracks released before 2023
+        def filter_recent_tracks(track):
+            release_date = track['album']['release_date']
+            release_year = int(release_date.split('-')[0])
+            return release_year >= current_year
 
-    return rec_tracks
+        recent_tracks = list(filter(filter_recent_tracks, recent_tracks))
+
+        # Retrieve audio features for recent tracks
+        recent_track_ids = [track['id'] for track in recent_tracks]
+        audio_features = sp.audio_features(recent_track_ids)
+
+        # Get genres for recent tracks
+        for track, audio_feature in zip(recent_tracks, audio_features):
+            track['genres'] = get_track_genres(sp, track['id'])
+
+        # Pre-process recent tracks for model prediction
+        X_recent = []
+        for track, feature in zip(recent_tracks, audio_features):
+            feature_dict = {key: feature[key] for key in feature_keys}
+            feature_dict['genres'] = track['genres']
+            X_recent.append([feature_dict[key] for key in feature_keys] + one_hot_encode_genres(feature_dict['genres'], unique_genres))
+
+        # Scale and apply PCA to the features of recent tracks
+        X_recent_scaled = scaler.transform(X_recent)
+        X_recent_pca = pca.transform(X_recent_scaled)
+
+        # Make predictions using the trained model
+        y_pred = best_model.predict(X_recent_pca)
+
+        # Add recent tracks with predicted ratings above the threshold to the top recommendations
+        for track, rating in zip(recent_tracks, y_pred):
+            if rating >= rating_threshold:
+                top_recommendations.append(track)
+                found_tracks += 1
+
+            if found_tracks >= num_recommendations:
+                break
+
+    return top_recommendations[:num_recommendations]
 
 def get_recently_played(sp):
     recently_played = make_request_with_backoff(sp.current_user_recently_played(limit=50))
@@ -798,33 +818,14 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
     print(f"Optimization complete, best model: {best_model}, best params: {best_params}")
     socketio.emit("optimising_model", {"request_id": request_id}, namespace='/recommendation')
 
-    # Get playlist-specific top artists, and genres
-    playlist_top_genres, playlist_top_artists = get_top_tracks_artists_genres_for_playlist(sp, tracks)
-
-    # Generate recommendations based on user's top tracks, artists, and genres
-    rec_track_ids = set()
-    seed_artists = playlist_top_artists[:3]
-    seed_genres = playlist_top_genres[:2]
-    socketio.emit("top_artists", {"request_id": request_id}, namespace='/recommendation')
-
-    for track_id in [d['id'] for d in playlist_data]:
-        try:
-            rec_tracks = make_request_with_backoff(sp.recommendations, seed_artists=seed_artists, seed_genres=seed_genres, limit=50, market='from_token')['tracks']
-            for track in rec_tracks:
-                # Exclude tracks that are already in the seed playlist or liked by the user
-                if track['id'] not in track_ids and track['id'] not in liked_track_ids:
-                    rec_track_ids.add(track['id'])
-        except Exception as e:
-            emit_error_and_delete_playlist(request_id, "Adding tracks to playlist")
-    
-    socketio.emit("top_artists_done", {"request_id": request_id}, namespace='/recommendation')
     # After selecting the best model
     best_model.fit(X_scaled_pca, y)
 
     # Get top recommended tracks
-    rec_tracks = get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, scaler, pca, unique_genres, feature_keys)
+    rec_tracks = get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, seed_genres)
     print("Recommended tracks:", rec_tracks)
     print("Number of recommended tracks:", len(rec_tracks))
+    
     # Add the recommended tracks to the playlist
     track_ids = [track['id'] for track in rec_tracks]
     print("Extracted track IDs:", track_ids)
