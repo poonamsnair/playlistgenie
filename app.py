@@ -564,6 +564,79 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
 
     return rec_tracks
 
+def get_recently_played(sp):
+    recently_played = sp.current_user_recently_played(limit=50)
+    recently_played_ids = [item['track']['id'] for item in recently_played['items']]
+    return recently_played_ids
+
+def get_playlist_track_ids(sp, user_id, playlist_name):
+    playlists = sp.user_playlists(user_id)
+    target_playlist_id = None
+    for playlist in playlists['items']:
+        if playlist['name'] == playlist_name:
+            target_playlist_id = playlist['id']
+            break
+    
+    if target_playlist_id is None:
+        return []
+    
+    results = sp.playlist_tracks(target_playlist_id)
+    track_ids = [item['track']['id'] for item in results['items']]
+    return track_ids
+
+
+def get_seed_playlist_genres(playlist_data):
+    seed_genres = set()
+    for track in playlist_data:
+        seed_genres.update(track['genres'])
+    return seed_genres
+
+def get_liked_songs_with_similar_genres(sp, seed_genres):
+    liked_track_ids = get_user_liked_tracks(sp)
+    liked_songs = []
+
+    for track_id in liked_track_ids:
+        track_genres = get_track_genres(sp, track_id)
+        if seed_genres.intersection(track_genres):
+            liked_songs.append({
+                'id': track_id,
+                'genres': track_genres
+            })
+
+    return liked_songs
+
+def generate_ratings_for_liked_songs(sp, liked_songs, spotify_username):
+    ratings = {}
+    max_popularity = 100
+    max_playlists = 2
+    recently_played = get_recently_played(sp)
+    on_repeat_ids = get_playlist_track_ids(sp, spotify_username, "On Repeat")
+    repeat_rewind_ids = get_playlist_track_ids(sp, spotify_username, "Repeat Rewind")
+
+    for song in liked_songs:
+        track_id = song['id']
+        track = sp.track(track_id)
+        popularity = track['popularity']
+
+        recency_score = 0
+        if track_id in recently_played:
+            recency_score += 1
+
+        playlist_score = 0
+        if track_id in on_repeat_ids:
+            playlist_score += 1
+        if track_id in repeat_rewind_ids:
+            playlist_score += 1
+
+        # Combine popularity, recency, and playlist scores to compute the final rating
+        rating = (popularity / max_popularity) * 0.4 + (recency_score * 0.3) + (playlist_score / max_playlists) * 0.3
+        rating = round(rating * 10)  # Convert the rating to a scale of 1-10
+
+        ratings[track_id] = rating
+
+    return ratings
+
+
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
         socketio.emit("recommendation_error", {"request_id": request_id, "message": message}, namespace='/recommendation')
@@ -607,8 +680,29 @@ def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_man
         playlist_data.append(feature_dict)
 
     socketio.emit("audio_features_retrieved", {"request_id": request_id}, namespace='/recommendation')
+    
+    # Get unique genres in the seed playlist
+    seed_genres = get_seed_playlist_genres(playlist_data)
+
+    # Get liked songs with similar genres
+    liked_songs = get_liked_songs_with_similar_genres(sp, seed_genres)
+
+    # Generate ratings for liked songs
+    liked_songs_ratings = generate_ratings_for_liked_songs(sp, liked_songs, spotify_username)
+
+    # Update the playlist_data and ratings with liked songs and their ratings
+    for song in liked_songs:
+        track_id = song['id']
+        if track_id not in ratings:
+            audio_feature = make_request_with_backoff(sp.audio_features, [track_id])[0]
+            if audio_feature:
+                feature_dict = {key: audio_feature[key] for key in feature_keys}
+                feature_dict['ratings'] = liked_songs_ratings[track_id]
+                feature_dict['genres'] = song['genres']
+                playlist_data.append(feature_dict)
 
     unique_genres = get_unique_genres(playlist_data)
+    
     X = [[d[key] for key in feature_keys] + one_hot_encode_genres(d['genres'], unique_genres) for d in playlist_data]
     y = [d['ratings'] for d in playlist_data]
 
