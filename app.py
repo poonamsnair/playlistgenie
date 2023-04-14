@@ -484,62 +484,54 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
+def get_random_tracks(sp, num_tracks=1000, batch_size=50):
+    random_tracks = []
+    while len(random_tracks) < num_tracks:
+        random_offset = random.randint(0, 2000000)  # Choose a random offset within Spotify's catalog
+        tracks = make_request_with_backoff(sp.search, q='year:2023', type='track', limit=batch_size, offset=random_offset)['tracks']['items']
+        random_tracks.extend(tracks)
+    return random_tracks[:num_tracks]
+
 def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5):
     current_year = 2023
     found_tracks = 0
     top_recommendations = []
 
-    def filter_recent_tracks(track):
-        release_date = track['album']['release_date']
-        release_year = int(release_date.split('-')[0])
-        return release_year >= current_year
+    # Generate a large pool of random tracks released in 2023
+    random_tracks = get_random_tracks(sp)
 
-    while found_tracks < num_recommendations:
-        # Fetch new releases using the Browse feature
-        new_releases = make_request_with_backoff(sp.new_releases, limit=batch_size)['albums']['items']
+    # Retrieve audio features for random tracks
+    random_track_ids = [track['id'] for track in random_tracks]
+    audio_features = make_request_with_backoff(sp.audio_features, random_track_ids)
 
-        # Fetch tracks for each album
-        album_tracks = []
-        for album in new_releases:
-            tracks = make_request_with_backoff(sp.album_tracks, album['id'])['items']
-            album_tracks.extend(tracks)
+    # Get genres for random tracks
+    for track, audio_feature in zip(random_tracks, audio_features):
+        track['genres'] = get_track_genres(sp, track['id'])
 
-        # Filter out tracks released before 2023
-        recent_tracks = list(filter(filter_recent_tracks, album_tracks))
+    # Pre-process random tracks for model prediction
+    X_random = []
+    for track, feature in zip(random_tracks, audio_features):
+        feature_dict = {key: feature[key] for key in feature_keys}
+        feature_dict['genres'] = track['genres']
+        X_random.append([feature_dict[key] for key in feature_keys] + one_hot_encode_genres(feature_dict['genres'], unique_genres))
 
-        # Retrieve audio features for recent tracks
-        recent_track_ids = [track['id'] for track in recent_tracks]
-        audio_features = make_request_with_backoff(sp.audio_features, recent_track_ids)
+    # Scale and apply PCA to the features of random tracks
+    X_random_scaled = scaler.transform(X_random)
+    X_random_pca = pca.transform(X_random_scaled)
 
-        # Get genres for recent tracks
-        for track, audio_feature in zip(recent_tracks, audio_features):
-            track['genres'] = get_track_genres(sp, track['id'])
+    # Make predictions using the trained model
+    y_pred = best_model.predict(X_random_pca)
 
-        # Pre-process recent tracks for model prediction
-        X_recent = []
-        for track, feature in zip(recent_tracks, audio_features):
-            feature_dict = {key: feature[key] for key in feature_keys}
-            feature_dict['genres'] = track['genres']
-            X_recent.append([feature_dict[key] for key in feature_keys] + one_hot_encode_genres(feature_dict['genres'], unique_genres))
+    # Add random tracks with predicted ratings above the threshold to the top recommendations
+    for track, rating in zip(random_tracks, y_pred):
+        if rating >= rating_threshold:
+            top_recommendations.append(track)
+            found_tracks += 1
 
-        # Scale and apply PCA to the features of recent tracks
-        X_recent_scaled = scaler.transform(X_recent)
-        X_recent_pca = pca.transform(X_recent_scaled)
-
-        # Make predictions using the trained model
-        y_pred = best_model.predict(X_recent_pca)
-
-        # Add recent tracks with predicted ratings above the threshold to the top recommendations
-        for track, rating in zip(recent_tracks, y_pred):
-            if rating >= rating_threshold:
-                top_recommendations.append(track)
-                found_tracks += 1
-
-            if found_tracks >= num_recommendations:
-                break
+        if found_tracks >= num_recommendations:
+            break
 
     return top_recommendations[:num_recommendations]
-
 
 def background_recommendation(playlist_id, rec_playlist_id, request_id, auth_manager, ratings, spotify_username):
     def emit_error_and_delete_playlist(request_id, message):
