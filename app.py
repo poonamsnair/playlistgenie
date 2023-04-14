@@ -503,7 +503,7 @@ def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_k
                     'type': 'track',
                     'market': None,
                 }
-                results = sp.search(params=params)
+                results = sp.search(q=query, limit=batch_size, offset=0, type='track', market=None)
                 recent_tracks.extend(results['tracks']['items'])
                 time.sleep(sleep_time)
 
