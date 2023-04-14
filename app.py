@@ -125,8 +125,7 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
-def make_request_with_backoff(func, *args, **kwargs):
-    max_retries = 5
+def make_request_with_backoff(func, *args, max_retries=5, max_requests_per_second=20, **kwargs):
     retry_count = 0
     while retry_count < max_retries:
         try:
@@ -141,6 +140,11 @@ def make_request_with_backoff(func, *args, **kwargs):
                 retry_count += 1
             else:
                 raise e
+
+        # Sleep to limit the rate of requests
+        if retry_count % max_requests_per_second == 0:
+            time.sleep(1)
+
     raise Exception("Max retries reached")
 
 @app.route('/')
@@ -492,21 +496,29 @@ def get_random_tracks(sp, num_tracks=1000, batch_size=50):
         random_tracks.extend(tracks)
     return random_tracks[:num_tracks]
 
-def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5):
-    current_year = 2023
+def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20):
     found_tracks = 0
     top_recommendations = []
 
     # Generate a large pool of random tracks released in 2023
     random_tracks = get_random_tracks(sp)
 
-    # Retrieve audio features for random tracks
-    random_track_ids = [track['id'] for track in random_tracks]
-    audio_features = make_request_with_backoff(sp.audio_features, random_track_ids)
+    # Split random tracks into batches
+    random_track_batches = [random_tracks[i:i + batch_size] for i in range(0, len(random_tracks), batch_size)]
 
-    # Get genres for random tracks
-    for track, audio_feature in zip(random_tracks, audio_features):
-        track['genres'] = get_track_genres(sp, track['id'])
+    # Retrieve audio features for random tracks
+    audio_features = []
+    for batch in random_track_batches:
+        random_track_ids = [track['id'] for track in batch]
+        audio_features_batch = make_request_with_backoff(sp.audio_features, random_track_ids, max_retries=max_retries, max_requests_per_second=max_requests_per_second)
+        audio_features += audio_features_batch
+
+        # Get genres for random tracks
+        for track, audio_feature in zip(batch, audio_features_batch):
+            track['genres'] = get_track_genres(sp, track['id'])
+
+            # Stay within rate limit
+            time.sleep(1/max_requests_per_second)
 
     # Pre-process random tracks for model prediction
     X_random = []
