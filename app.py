@@ -484,40 +484,32 @@ def get_audio_features(sp, track_ids):
         audio_features.extend(make_request_with_backoff(sp.audio_features, track_ids[i:i+50]))
     return audio_features
 
-def get_top_recommended_tracks(best_model, scaler, pca, playlist_data, feature_keys, unique_genres, sp, num_recommendations=100, rating_threshold=4.5, batch_size=50, sleep_time=1):
+def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, num_recommendations=100, rating_threshold=8, batch_size=20, sleep_time=1):
     current_year = 2023
     found_tracks = 0
     top_recommendations = []
 
-    genre_query = " OR ".join([f"genre:{genre}" for genre in unique_genres])
+    def filter_recent_tracks(track):
+        release_date = track['album']['release_date']
+        release_year = int(release_date.split('-')[0])
+        return release_year >= current_year
 
     while found_tracks < num_recommendations:
-        recent_tracks = []
-        for year in range(current_year, current_year + 1):
-            for month in range(1, 13):
-                query = f"({genre_query}) year:{year} month:{month}"
-                params = {
-                    'q': query,
-                    'limit': batch_size,
-                    'offset': 0,
-                    'type': 'track',
-                    'market': None,
-                }
-                results = sp.search(q=query, limit=batch_size, offset=0, type='track', market=None)
-                recent_tracks.extend(results['tracks']['items'])
-                time.sleep(sleep_time)
+        # Fetch new releases using the Browse feature
+        new_releases = make_request_with_backoff(sp.new_releases, limit=batch_size)['albums']['items']
+
+        # Fetch tracks for each album
+        album_tracks = []
+        for album in new_releases:
+            tracks = make_request_with_backoff(sp.album_tracks, album['id'])['items']
+            album_tracks.extend(tracks)
 
         # Filter out tracks released before 2023
-        def filter_recent_tracks(track):
-            release_date = track['album']['release_date']
-            release_year = int(release_date.split('-')[0])
-            return release_year >= current_year
-
-        recent_tracks = list(filter(filter_recent_tracks, recent_tracks))
+        recent_tracks = list(filter(filter_recent_tracks, album_tracks))
 
         # Retrieve audio features for recent tracks
         recent_track_ids = [track['id'] for track in recent_tracks]
-        audio_features = sp.audio_features(recent_track_ids)
+        audio_features = make_request_with_backoff(sp.audio_features, recent_track_ids)
 
         # Get genres for recent tracks
         for track, audio_feature in zip(recent_tracks, audio_features):
