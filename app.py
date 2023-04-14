@@ -565,25 +565,26 @@ def get_top_recommended_tracks(sp, rec_track_ids, playlist_data, best_model, sca
     return rec_tracks
 
 def get_recently_played(sp):
-    recently_played = sp.current_user_recently_played(limit=50)
+    recently_played = make_request_with_backoff(sp.current_user_recently_played, limit=50)
     recently_played_ids = [item['track']['id'] for item in recently_played['items']]
     return recently_played_ids
 
 def get_playlist_track_ids(sp, user_id, playlist_name):
     playlists = sp.user_playlists(user_id)
+def get_playlist_track_ids(sp, user_id, playlist_name):
+    playlists = make_request_with_backoff(sp.user_playlists, user_id)
     target_playlist_id = None
     for playlist in playlists['items']:
         if playlist['name'] == playlist_name:
             target_playlist_id = playlist['id']
             break
-    
+
     if target_playlist_id is None:
         return []
-    
-    results = sp.playlist_tracks(target_playlist_id)
+
+    results = make_request_with_backoff(sp.playlist_tracks, target_playlist_id)
     track_ids = [item['track']['id'] for item in results['items']]
     return track_ids
-
 
 def get_seed_playlist_genres(playlist_data):
     seed_genres = set()
@@ -615,7 +616,7 @@ def generate_ratings_for_liked_songs(sp, liked_songs, spotify_username):
 
     for song in liked_songs:
         track_id = song['id']
-        track = sp.track(track_id)
+        track = make_request_with_backoff(sp.track, track_id)
         popularity = track['popularity']
 
         recency_score = 0
