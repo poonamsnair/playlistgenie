@@ -503,7 +503,7 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popul
 
     while len(random_tracks) < num_tracks:
         # Get recommendations based on seed tracks and best model parameters with back-off logic
-        recommended_tracks = make_request_with_backoff(
+        recommended_tracks_response = make_request_with_backoff(
             sp.recommendations,
             seed_tracks=seed_tracks,
             limit=100,
@@ -511,6 +511,9 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popul
             max_requests_per_second=max_requests_per_second,
             **best_model_params
         )
+
+        # Extract the 'tracks' list from the response
+        recommended_tracks = recommended_tracks_response.get('tracks', [])
 
         # Filter tracks by popularity, release year, and exclude tracks
         filtered_tracks = [
