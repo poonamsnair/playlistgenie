@@ -302,7 +302,7 @@ def playlists():
         request=request,
         username=username
     )
-   
+
 @app.route('/rate_playlist/<playlist_id>/', methods=['GET', 'POST'])
 def rate_playlist(playlist_id):
     auth_manager = spotipy.oauth2.SpotifyOAuth(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI,
@@ -322,25 +322,12 @@ def rate_playlist(playlist_id):
     try:
         tracks = get_playlist_tracks(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
-
-        track_ids = [track['track']['id'] for track in unique_tracks]
-        track_id_chunks = [track_ids[i:i + 50] for i in range(0, len(track_ids), 50)]
-
-        track_info_list = []
-        for track_ids_chunk in track_id_chunks:
-            track_info_chunk = make_request_with_backoff(sp.tracks, track_ids_chunk)
-            track_info_list.extend(track_info_chunk)
-
-        track_info_dict = {track_info['id']: track_info for track_info in track_info_list}
-
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
-
         for track in unique_tracks:
-            track_id = track['track']['id']
-            track_info = track_info_dict[track_id]
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
-
+        # Render the template without the access token
         return render_template('rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
     except Exception as e:
         return render_template('error.html', username=username, message=f'Failed to retrieve playlist information. Please try again later. Exception: {str(e)}')
@@ -365,14 +352,10 @@ def mobile_rate_playlist(playlist_id):
     try:
         tracks = get_playlist_tracks(sp, playlist_id)
         unique_tracks = remove_duplicates(tracks)
-        
         if 'ratings' in session and playlist_id in session['ratings']:
             return redirect(url_for('recommendation', username=username, playlist_id=playlist_id))
-
-        track_ids = [track['track']['id'] for track in unique_tracks]
-        track_infos = make_request_with_backoff(sp.tracks, track_ids)
-
-        for track, track_info in zip(unique_tracks, track_infos):
+        for track in unique_tracks:
+            track_info = make_request_with_backoff(sp.track, track['track']['id'])
             track['spotify_uri'] = track_info['uri']
         # Render the template without the access token
         return render_template('mobile_rate_playlist.html', tracks=unique_tracks, playlist_id=playlist_id, username=username)
