@@ -495,7 +495,7 @@ def extract_best_model_params(top_rated_tracks):
 
     return best_params
 
-def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20, exclude_tracks=None):
+def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20, exclude_tracks=None):
     if exclude_tracks is None:
         exclude_tracks = []
     
@@ -528,7 +528,7 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=1000, popul
 
 
 
-def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_tracks=100, exclude_tracks=None, num_recommendations=100, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20, ):
+def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_tracks=100, exclude_tracks=None, num_recommendations=20, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20, ):
     found_tracks = 0
     top_recommendations = []
 
