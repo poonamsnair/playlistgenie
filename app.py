@@ -42,6 +42,7 @@ import sys
 import traceback
 import time
 import logging
+import requests
 logging.basicConfig(level=logging.DEBUG)
 
 # Import Eventlet and apply monkey patching for better concurrency support
@@ -125,27 +126,34 @@ def handle_unhandled_exception(e):
     # Render the 'error.html' template with the specified error code, message, and return it along with the error code as HTTP status code
     return render_template('error.html', username=username, error_code=error_code, message=message), error_code
 
-def make_request_with_backoff(func, *args, max_retries=5, max_requests_per_second=20, **kwargs):
+
+def make_request_with_backoff(func, *args, max_retries=10, max_requests_per_second=20, timeout=10, **kwargs):
     retry_count = 0
     while retry_count < max_retries:
         try:
             print(f"Attempt #{retry_count + 1}")
-            return func(*args, **kwargs)
-        except spotipy.exceptions.SpotifyException as e:
-            print(f"SpotifyException caught: {e}")
-            if e.http_status == 429:  # Rate limit error
+            return func(*args, timeout=timeout, **kwargs)
+        except (spotipy.exceptions.SpotifyException, requests.exceptions.RequestException) as e:
+            print(f"Exception caught: {e}")
+            if isinstance(e, spotipy.exceptions.SpotifyException) and e.http_status == 429:  # Rate limit error
                 sleep_time = (2 ** retry_count) + random.uniform(0, 1)
                 print(f"Rate limit hit, waiting for {sleep_time} seconds")
                 time.sleep(sleep_time)
-                retry_count += 1
+            elif isinstance(e, requests.exceptions.RequestException):  # Network or temporary issue
+                sleep_time = (2 ** retry_count) + random.uniform(0, 1)
+                print(f"Network issue or temporary API issue, waiting for {sleep_time} seconds")
+                time.sleep(sleep_time)
             else:
                 raise e
+
+            retry_count += 1
 
         # Sleep to limit the rate of requests
         if retry_count % max_requests_per_second == 0:
             time.sleep(1)
 
     raise Exception("Max retries reached")
+
 
 @app.route('/')
 def index():
@@ -495,13 +503,17 @@ def extract_best_model_params(top_rated_tracks):
 
     return best_params
 
-def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popularity_range=(30, 70), max_retries=5, max_requests_per_second=20, exclude_tracks=None):
+def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popularity_range=(30, 70), max_retries=10, max_requests_per_second=20, exclude_tracks=None):
     if exclude_tracks is None:
         exclude_tracks = []
-    
+        
+    if len(seed_tracks) > 5:
+        raise ValueError("The number of seed tracks should not exceed 5.")
+        
     random_tracks = []
 
     while len(random_tracks) < num_tracks:
+        print(f"Getting recommendations, current random_tracks length: {len(random_tracks)}")
         # Get recommendations based on seed tracks and best model parameters with back-off logic
         recommended_tracks_response = make_request_with_backoff(
             sp.recommendations,
@@ -525,7 +537,6 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
         random_tracks.extend(filtered_tracks)
 
     return random_tracks[:num_tracks]
-
 
 
 def get_top_recommended_tracks(best_model, scaler, pca, feature_keys, unique_genres, sp, top_rated_tracks, best_model_params, num_tracks=100, exclude_tracks=None, num_recommendations=20, batch_size=50, rating_threshold=8, max_retries=5, max_requests_per_second=20, ):
