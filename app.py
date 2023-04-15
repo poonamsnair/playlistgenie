@@ -521,6 +521,7 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
     num_tracks_per_seed = num_tracks // len(seed_tracks)
 
     for seed_track in seed_tracks:
+        no_change_counter = 0
         while len(random_tracks) < num_tracks:
             print(f"Getting recommendations, current random_tracks length: {len(random_tracks)}")
             
@@ -547,15 +548,23 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
             ]
 
             # Add filtered tracks to random_tracks and unique_track_ids
+            prev_random_tracks_length = len(random_tracks)
             for track in filtered_tracks:
                 random_tracks.append(track)
                 unique_track_ids.add(track['id'])
 
-            # Break the loop if enough tracks are collected for the current seed track
-            if len(random_tracks) >= num_tracks_per_seed * (seed_tracks.index(seed_track) + 1):
+            # Check if random_tracks length has changed, increment no_change_counter if not
+            if len(random_tracks) == prev_random_tracks_length:
+                no_change_counter += 1
+            else:
+                no_change_counter = 0  # Reset the counter if random_tracks length has increased
+
+            # Break the loop if enough tracks are collected for the current seed track or no_change_counter reaches 3
+            if len(random_tracks) >= num_tracks_per_seed * (seed_tracks.index(seed_track) + 1) or no_change_counter == 3:
                 break
 
     return random_tracks[:num_tracks]
+
 
 
 
