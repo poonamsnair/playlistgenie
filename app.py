@@ -517,35 +517,43 @@ def get_random_tracks(sp, seed_tracks, best_model_params, num_tracks=250, popula
         
     random_tracks = []
     unique_track_ids = set()
+    
+    num_tracks_per_seed = num_tracks // len(seed_tracks)
 
-    while len(random_tracks) < num_tracks:
-        print(f"Getting recommendations, current random_tracks length: {len(random_tracks)}")
-        # Get recommendations based on seed tracks and best model parameters with back-off logic
-        recommended_tracks_response = make_request_with_backoff(
-            sp.recommendations,
-            seed_tracks=seed_tracks,
-            limit=100,
-            max_retries=max_retries,
-            max_requests_per_second=max_requests_per_second,
-            # **best_model_params
-        )
+    for seed_track in seed_tracks:
+        while len(random_tracks) < num_tracks:
+            print(f"Getting recommendations, current random_tracks length: {len(random_tracks)}")
+            
+            # Get recommendations based on individual seed tracks and best model parameters with back-off logic
+            recommended_tracks_response = make_request_with_backoff(
+                sp.recommendations,
+                seed_tracks=[seed_track],
+                limit=100,
+                min_popularity=30,
+                max_popularity=70,
+                max_retries=max_retries,
+                max_requests_per_second=max_requests_per_second,
+            )
 
-        # Extract the 'tracks' list from the response
-        recommended_tracks = recommended_tracks_response.get('tracks', [])
+            # Extract the 'tracks' list from the response
+            recommended_tracks = recommended_tracks_response.get('tracks', [])
 
-        # Filter tracks by popularity, release year, and exclude tracks
-        filtered_tracks = [
-            track for track in recommended_tracks
-            if popularity_range[0] <= track['popularity'] <= popularity_range[1]
-            and (track.get('album') is None or track['album']['release_date'][:4] == '2023')
-            and track['id'] not in exclude_tracks
-            and track['id'] not in unique_track_ids
-        ]
+            # Filter tracks by release year and exclude tracks
+            filtered_tracks = [
+                track for track in recommended_tracks
+                if (track.get('album') is None or track['album']['release_date'][:4] == '2023')
+                and track['id'] not in exclude_tracks
+                and track['id'] not in unique_track_ids
+            ]
 
-        # Add filtered tracks to random_tracks and unique_track_ids
-        for track in filtered_tracks:
-            random_tracks.append(track)
-            unique_track_ids.add(track['id'])
+            # Add filtered tracks to random_tracks and unique_track_ids
+            for track in filtered_tracks:
+                random_tracks.append(track)
+                unique_track_ids.add(track['id'])
+
+            # Break the loop if enough tracks are collected for the current seed track
+            if len(random_tracks) >= num_tracks_per_seed * (seed_tracks.index(seed_track) + 1):
+                break
 
     return random_tracks[:num_tracks]
 
